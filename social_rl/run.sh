@@ -16,12 +16,12 @@
 set -e
 set -x
 
-python3 -m virtualenv .
-source ./bin/activate
+#python3 -m virtualenv .
+#source ./bin/activate
 
 pip3 install tensorflow
 pip3 install -r social_rl/requirements.txt
 
-python3 -m social_rl.multiagent_tfagents.test_multiagent
+#python3 -m social_rl.multiagent_tfagents.test_multiagent
 
-python3 -m social_rl.adversarial_env.test_adversarial_env
+python3 -m social_rl.adversarial_env.train_adversarial_env --debug --root_dir=/tmp/paired/
