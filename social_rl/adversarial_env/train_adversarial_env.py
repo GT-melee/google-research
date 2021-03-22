@@ -172,7 +172,7 @@ def train_eval(
 
   if combined_population:
     # The number of train steps per environment episodes differs based on the
-    # number of agents trained per episode. Adjust value when training a
+    # number of agents trained per episode. Adjust value when trainhtoping a
     # population of agents per episode.
     # The number of agents must change from 3 (for protagonist, antagonist,
     # adversary) to protagonist population size + adversary
