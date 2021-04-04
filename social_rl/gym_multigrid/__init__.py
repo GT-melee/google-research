@@ -15,7 +15,6 @@
 
 """Import envs and wrappers to set up module."""
 # Import wrappers so it's accessible when installing with pip
-import gym_minigrid.wrappers
 
 # Import the envs module so that envs register themselves
 import social_rl.gym_multigrid.envs

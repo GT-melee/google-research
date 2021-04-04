@@ -20,7 +20,6 @@ from __future__ import division
 from __future__ import print_function
 
 import numpy as np
-
 from tf_agents.environments import gym_wrapper
 from tf_agents.specs import array_spec
 from tf_agents.specs.tensor_spec import BoundedTensorSpec
@@ -29,82 +28,82 @@ from tf_agents.utils import nest_utils
 
 
 class MultiagentGymWrapper(gym_wrapper.GymWrapper):
-  """Wrapper implementing PyEnvironment interface for multiagent gym envs.
+    """Wrapper implementing PyEnvironment interface for multiagent gym envs.
 
-  Reward spec is generated based on the number of agents.
+    Reward spec is generated based on the number of agents.
 
-  Action and observation specs are automatically generated from the action and
-  observation spaces of the underlying environment. The expectation is that the
-  first dimension of the environment specs will be the number of agents.
-  """
-
-  def __init__(self,
-               gym_env,
-               n_agents,
-               discount=1.0,
-               spec_dtype_map=None,
-               match_obs_space_dtype=True,
-               auto_reset=True,
-               simplify_box_bounds=True):
-    self.n_agents = n_agents
-
-    super(MultiagentGymWrapper, self).__init__(
-        gym_env, discount, spec_dtype_map, match_obs_space_dtype, auto_reset,
-        simplify_box_bounds)
-
-    # Create a single-agent version of the action spec and then tile it to
-    # comply with tf-agents spec requirements.
-    single_action_spec = BoundedTensorSpec(
-        shape=(), dtype=self._action_spec.dtype, name=self._action_spec.name,
-        minimum=self._action_spec.minimum, maximum=self._action_spec.maximum)
-    self._action_spec = [single_action_spec] * n_agents
-
-  def reward_spec(self):
-    """Defines a vector reward based on the number of agents.
-
-    Returns:
-      An `ArraySpec`, or a nested dict, list or tuple of `ArraySpec`s.
+    Action and observation specs are automatically generated from the action and
+    observation spaces of the underlying environment. The expectation is that the
+    first dimension of the environment specs will be the number of agents.
     """
-    if self._gym_env.minigrid_mode:
-      return array_spec.ArraySpec(shape=(), dtype=np.float32, name='reward')
-    else:
-      return array_spec.ArraySpec(shape=(self.n_agents,), dtype=np.float32,
-                                  name='reward')
 
-  def _reset(self):
-    observation = self._gym_env.reset()
-    self._info = None
-    self._done = False
+    def __init__(self,
+                 gym_env,
+                 n_agents,
+                 discount=1.0,
+                 spec_dtype_map=None,
+                 match_obs_space_dtype=True,
+                 auto_reset=True,
+                 simplify_box_bounds=True):
+        self.n_agents = n_agents
 
-    if self._match_obs_space_dtype:
-      observation = self._to_obs_space_dtype(observation)
-    reset_step = ts_lib.restart(observation, reward_spec=self.reward_spec())
-    return reset_step
+        super(MultiagentGymWrapper, self).__init__(
+            gym_env, discount, spec_dtype_map, match_obs_space_dtype, auto_reset,
+            simplify_box_bounds)
 
-  def _step(self, action):
-    # Automatically reset the environments on step if they need to be reset.
-    if self._auto_reset and self._done:
-      return self.reset()
+        # Create a single-agent version of the action spec and then tile it to
+        # comply with tf-agents spec requirements.
+        single_action_spec = BoundedTensorSpec(
+            shape=(), dtype=self._action_spec.dtype, name=self._action_spec.name,
+            minimum=self._action_spec.minimum, maximum=self._action_spec.maximum)
+        self._action_spec = [single_action_spec] * n_agents
 
-    # Some environments (e.g. FrozenLake) use the action as a key to the
-    # transition probability so it has to be hashable. In the case of discrete
-    # actions we have a numpy scalar (e.g array(2)) which is not hashable
-    # in this case, we simply pull out the scalar value which will be hashable.
-    try:
-      action = action.item() if self._action_is_discrete else action
-    except AttributeError:
-      action = action[0]  # Remove ListWrapper for single-agent compatibility
+    def reward_spec(self):
+        """Defines a vector reward based on the number of agents.
 
-    observation, reward, self._done, self._info = self._gym_env.step(action)
+        Returns:
+          An `ArraySpec`, or a nested dict, list or tuple of `ArraySpec`s.
+        """
+        if self._gym_env.minigrid_mode:
+            return array_spec.ArraySpec(shape=(), dtype=np.float32, name='reward')
+        else:
+            return array_spec.ArraySpec(shape=(self.n_agents,), dtype=np.float32,
+                                        name='reward')
 
-    if self._match_obs_space_dtype:
-      observation = self._to_obs_space_dtype(observation)
+    def _reset(self):
+        observation = self._gym_env.reset()
+        self._info = None
+        self._done = False
 
-    reward = np.asarray(reward, dtype=self.reward_spec().dtype)
-    outer_dims = nest_utils.get_outer_array_shape(reward, self.reward_spec())
+        if self._match_obs_space_dtype:
+            observation = self._to_obs_space_dtype(observation)
+        reset_step = ts_lib.restart(observation, reward_spec=self.reward_spec())
+        return reset_step
 
-    if self._done:
-      return ts_lib.termination(observation, reward, outer_dims=outer_dims)
-    else:
-      return ts_lib.transition(observation, reward, self._discount,
-                               outer_dims=outer_dims)
+    def _step(self, action):
+        # Automatically reset the environments on step if they need to be reset.
+        if self._auto_reset and self._done:
+            return self.reset()
+
+        # Some environments (e.g. FrozenLake) use the action as a key to the
+        # transition probability so it has to be hashable. In the case of discrete
+        # actions we have a numpy scalar (e.g array(2)) which is not hashable
+        # in this case, we simply pull out the scalar value which will be hashable.
+        try:
+            action = action.item() if self._action_is_discrete else action
+        except AttributeError:
+            action = action[0]  # Remove ListWrapper for single-agent compatibility
+
+        observation, reward, self._done, self._info = self._gym_env.step(action)
+
+        if self._match_obs_space_dtype:
+            observation = self._to_obs_space_dtype(observation)
+
+        reward = np.asarray(reward, dtype=self.reward_spec().dtype)
+        outer_dims = nest_utils.get_outer_array_shape(reward, self.reward_spec())
+
+        if self._done:
+            return ts_lib.termination(observation, reward, outer_dims=outer_dims)
+        else:
+            return ts_lib.transition(observation, reward, self._discount,
+                                     outer_dims=outer_dims)

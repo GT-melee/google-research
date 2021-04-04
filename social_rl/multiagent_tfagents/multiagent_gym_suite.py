@@ -24,8 +24,8 @@ from the environment specs and utilize our TimeLimit wrapper.
 """
 import gin
 import gym
-
 from tf_agents.environments import wrappers
+
 from social_rl.multiagent_tfagents import multiagent_gym_env
 
 
@@ -38,51 +38,51 @@ def load(environment_name,
          spec_dtype_map=None,
          gym_kwargs=None,
          auto_reset=True):
-  """Loads the selected environment and wraps it with the specified wrappers.
+    """Loads the selected environment and wraps it with the specified wrappers.
 
-  Note that by default a TimeLimit wrapper is used to limit episode lengths
-  to the default benchmarks defined by the registered environments.
+    Note that by default a TimeLimit wrapper is used to limit episode lengths
+    to the default benchmarks defined by the registered environments.
 
-  Args:
-    environment_name: Name for the environment to load.
-    discount: Discount to use for the environment.
-    max_episode_steps: If None the max_episode_steps will be set to the default
-      step limit defined in the environment's spec. No limit is applied if set
-      to 0 or if there is no max_episode_steps set in the environment's spec.
-    gym_env_wrappers: Iterable with references to wrapper classes to use
-      directly on the gym environment.
-    env_wrappers: Iterable with references to wrapper classes to use on the
-      gym_wrapped environment.
-    spec_dtype_map: A dict that maps gym specs to tf dtypes to use as the
-      default dtype for the tensors. An easy way how to configure a custom
-      mapping through Gin is to define a gin-configurable function that returns
-      desired mapping and call it in your Gin congif file, for example:
-      `suite_gym.load.spec_dtype_map = @get_custom_mapping()`.
-    gym_kwargs: The kwargs to pass to the Gym environment class.
-    auto_reset: If True (default), reset the environment automatically after a
-      terminal state is reached.
+    Args:
+      environment_name: Name for the environment to load.
+      discount: Discount to use for the environment.
+      max_episode_steps: If None the max_episode_steps will be set to the default
+        step limit defined in the environment's spec. No limit is applied if set
+        to 0 or if there is no max_episode_steps set in the environment's spec.
+      gym_env_wrappers: Iterable with references to wrapper classes to use
+        directly on the gym environment.
+      env_wrappers: Iterable with references to wrapper classes to use on the
+        gym_wrapped environment.
+      spec_dtype_map: A dict that maps gym specs to tf dtypes to use as the
+        default dtype for the tensors. An easy way how to configure a custom
+        mapping through Gin is to define a gin-configurable function that returns
+        desired mapping and call it in your Gin congif file, for example:
+        `suite_gym.load.spec_dtype_map = @get_custom_mapping()`.
+      gym_kwargs: The kwargs to pass to the Gym environment class.
+      auto_reset: If True (default), reset the environment automatically after a
+        terminal state is reached.
 
-  Returns:
-    A PyEnvironment instance.
-  """
-  gym_kwargs = gym_kwargs if gym_kwargs else {}
-  gym_spec = gym.spec(environment_name)
-  gym_env = gym_spec.make(**gym_kwargs)
+    Returns:
+      A PyEnvironment instance.
+    """
+    gym_kwargs = gym_kwargs if gym_kwargs else {}
+    gym_spec = gym.spec(environment_name)
+    gym_env = gym_spec.make(**gym_kwargs)
 
-  n_agents = gym_env.n_agents
+    n_agents = gym_env.n_agents
 
-  if max_episode_steps is None and gym_spec.max_episode_steps is not None:
-    max_episode_steps = gym_spec.max_episode_steps
+    if max_episode_steps is None and gym_spec.max_episode_steps is not None:
+        max_episode_steps = gym_spec.max_episode_steps
 
-  return wrap_env(
-      gym_env,
-      n_agents,
-      discount=discount,
-      max_episode_steps=max_episode_steps,
-      gym_env_wrappers=gym_env_wrappers,
-      env_wrappers=env_wrappers,
-      spec_dtype_map=spec_dtype_map,
-      auto_reset=auto_reset)
+    return wrap_env(
+        gym_env,
+        n_agents,
+        discount=discount,
+        max_episode_steps=max_episode_steps,
+        gym_env_wrappers=gym_env_wrappers,
+        env_wrappers=env_wrappers,
+        spec_dtype_map=spec_dtype_map,
+        auto_reset=auto_reset)
 
 
 @gin.configurable
@@ -95,50 +95,50 @@ def wrap_env(gym_env,
              env_wrappers=(),
              spec_dtype_map=None,
              auto_reset=True):
-  """Wraps given gym environment with TF Agent's GymWrapper.
+    """Wraps given gym environment with TF Agent's GymWrapper.
 
-  Note that by default a TimeLimit wrapper is used to limit episode lengths
-  to the default benchmarks defined by the registered environments.
+    Note that by default a TimeLimit wrapper is used to limit episode lengths
+    to the default benchmarks defined by the registered environments.
 
-  Args:
-    gym_env: An instance of OpenAI gym environment.
-    n_agents: Integer number of agents in the environment.
-    discount: Discount to use for the environment.
-    max_episode_steps: Used to create a TimeLimitWrapper. No limit is applied
-      if set to None or 0. Usually set to `gym_spec.max_episode_steps` in `load.
-    gym_env_wrappers: Iterable with references to wrapper classes to use
-      directly on the gym environment.
-    time_limit_wrapper: Wrapper that accepts (env, max_episode_steps) params to
-      enforce a TimeLimit. Usuaully this should be left as the default,
-      wrappers.TimeLimit.
-    env_wrappers: Iterable with references to wrapper classes to use on the
-      gym_wrapped environment.
-    spec_dtype_map: A dict that maps gym specs to tf dtypes to use as the
-      default dtype for the tensors. An easy way how to configure a custom
-      mapping through Gin is to define a gin-configurable function that returns
-      desired mapping and call it in your Gin config file, for example:
-      `suite_gym.load.spec_dtype_map = @get_custom_mapping()`.
-    auto_reset: If True (default), reset the environment automatically after a
-      terminal state is reached.
+    Args:
+      gym_env: An instance of OpenAI gym environment.
+      n_agents: Integer number of agents in the environment.
+      discount: Discount to use for the environment.
+      max_episode_steps: Used to create a TimeLimitWrapper. No limit is applied
+        if set to None or 0. Usually set to `gym_spec.max_episode_steps` in `load.
+      gym_env_wrappers: Iterable with references to wrapper classes to use
+        directly on the gym environment.
+      time_limit_wrapper: Wrapper that accepts (env, max_episode_steps) params to
+        enforce a TimeLimit. Usuaully this should be left as the default,
+        wrappers.TimeLimit.
+      env_wrappers: Iterable with references to wrapper classes to use on the
+        gym_wrapped environment.
+      spec_dtype_map: A dict that maps gym specs to tf dtypes to use as the
+        default dtype for the tensors. An easy way how to configure a custom
+        mapping through Gin is to define a gin-configurable function that returns
+        desired mapping and call it in your Gin config file, for example:
+        `suite_gym.load.spec_dtype_map = @get_custom_mapping()`.
+      auto_reset: If True (default), reset the environment automatically after a
+        terminal state is reached.
 
-  Returns:
-    A PyEnvironment instance.
-  """
-  for wrapper in gym_env_wrappers:
-    gym_env = wrapper(gym_env)
+    Returns:
+      A PyEnvironment instance.
+    """
+    for wrapper in gym_env_wrappers:
+        gym_env = wrapper(gym_env)
 
-  env = multiagent_gym_env.MultiagentGymWrapper(
-      gym_env,
-      n_agents,
-      discount=discount,
-      spec_dtype_map=spec_dtype_map,
-      auto_reset=auto_reset,
-  )
+    env = multiagent_gym_env.MultiagentGymWrapper(
+        gym_env,
+        n_agents,
+        discount=discount,
+        spec_dtype_map=spec_dtype_map,
+        auto_reset=auto_reset,
+    )
 
-  if max_episode_steps is not None and max_episode_steps > 0:
-    env = time_limit_wrapper(env, max_episode_steps)
+    if max_episode_steps is not None and max_episode_steps > 0:
+        env = time_limit_wrapper(env, max_episode_steps)
 
-  for wrapper in env_wrappers:
-    env = wrapper(env)
+    for wrapper in env_wrappers:
+        env = wrapper(env)
 
-  return env
+    return env
