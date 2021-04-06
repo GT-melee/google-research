@@ -245,6 +245,36 @@ class AdversarialEnv(multigrid.MultiGridEnv):
   def generate_random_z(self):
     return np.random.uniform(size=(self.random_z_dim,)).astype(np.float32)
 
+  def pick_color(self, loc, object_id):
+    if object_id == 0:
+      return
+
+    # map loc to color
+    color_str = list(minigrid.COLORS.keys())[loc % 6]
+    # FIXME
+    """
+    AttributeError: Can't pickle local object 'AdversarialEnv.pick_color.<locals>.gen_goal'
+
+  In call to configurable 'eager_compute' (<function eager_compute at 0x7f5864e05ca0>)
+  In call to configurable 'train_eval' (<function train_eval at 0x7f594c86c1f0>)
+    """
+    if object_id == 1:
+      def gen_goal():
+        g = minigrid.Goal()
+        g.color = color_str
+        return g
+      self.gen_goal = gen_goal
+    elif object_id == 2:
+      def gen_wall():
+        g = minigrid.Wall()
+        g.color = color_str
+        return g
+      self.gen_wall = gen_wall
+    elif object_id == 3:
+      def get_agent_color():
+        return 0  # CHARLIE TODO FIXME this is scuffed, makes place_one_agent mess up
+      self.get_agent_color = get_agent_color
+
   def step_adversary(self, loc):
     """The adversary gets n_clutter + 2 moves to place the goal, agent, blocks.
 
@@ -261,23 +291,46 @@ class AdversarialEnv(multigrid.MultiGridEnv):
     if loc >= self.adversary_action_dim:
       raise ValueError('Position passed to step_adversary is outside the grid.')
 
+    # CHARLIE: to add the domain shift, what we'll do is actually just add three steps to each run, and during these
+    # additionnal steps we'll map 'loc' to a set of shifts. So the adv will output '4', it'll be mapped to 'purple', and
+    # it'll choose "wall, goals, agent" in sequence.
+
     # Add offset of 1 for outside walls
     x = int(loc % (self.width - 2)) + 1
     y = int(loc / (self.width - 2)) + 1
     done = False
 
+    should_choose_colors = 0
     if self.choose_goal_last:
-      should_choose_goal = self.adversary_step_count == self.adversary_max_steps - 2
-      should_choose_agent = self.adversary_step_count == self.adversary_max_steps - 1
+      should_choose_goal = self.adversary_step_count == self.adversary_max_steps - 4
+      should_choose_agent = self.adversary_step_count == self.adversary_max_steps - 5
+
+      if self.adversary_step_count == self.adversary_max_steps - 1:
+        should_choose_colors = 1
+      elif self.adversary_step_count == self.adversary_max_steps - 2:
+        should_choose_colors = 2
+      elif self.adversary_step_count == self.adversary_max_steps - 3:
+        should_choose_colors = 3
+
     else:
-      should_choose_goal = self.adversary_step_count == 0
-      should_choose_agent = self.adversary_step_count == 1
+      should_choose_goal = self.adversary_step_count == 3
+      should_choose_agent = self.adversary_step_count == 4
+
+      if self.adversary_step_count == 0:
+        should_choose_colors = 1
+      elif self.adversary_step_count == 1:
+        should_choose_colors = 2
+      elif self.adversary_step_count == 2:
+        should_choose_colors = 3
+
+    if should_choose_colors != 0:
+      self.pick_color(loc, should_choose_colors)
 
     # Place goal
-    if should_choose_goal:
+    elif should_choose_goal:
       # If there is goal noise, sometimes randomly place the goal
       if random.random() < self.goal_noise:
-        self.goal_pos = self.place_obj(minigrid.Goal(), max_tries=100)
+        self.goal_pos = self.place_obj(self.gen_goal(), max_tries=100) #self.goal_pos = self.place_obj(minigrid.Goal(), max_tries=100)
       else:
         self.remove_wall(x, y)  # Remove any walls that might be in this loc
         self.put_obj(minigrid.Goal(), x, y)
@@ -290,18 +343,18 @@ class AdversarialEnv(multigrid.MultiGridEnv):
       # Goal has already been placed here
       if self.grid.get(x, y) is not None:
         # Place agent randomly
-        self.agent_start_pos = self.place_one_agent(0, rand_dir=False)
+        self.agent_start_pos = self.place_one_agent(self.get_agent_color(), rand_dir=False)
         self.deliberate_agent_placement = 0
       else:
         self.agent_start_pos = np.array([x, y])
-        self.place_agent_at_pos(0, self.agent_start_pos, rand_dir=False)
+        self.place_agent_at_pos(self.get_agent_color(), self.agent_start_pos, rand_dir=False)
         self.deliberate_agent_placement = 1
 
     # Place wall
     elif self.adversary_step_count < self.adversary_max_steps:
       # If there is already an object there, action does nothing
       if self.grid.get(x, y) is None:
-        self.put_obj(minigrid.Wall(), x, y)
+        self.put_obj(self.gen_wall(), x, y)
         self.n_clutter_placed += 1
         self.wall_locs.append((x-1, y-1))
 

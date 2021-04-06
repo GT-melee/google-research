@@ -41,13 +41,7 @@ import gym_minigrid.rendering as rendering
 import numpy as np
 
 # Map of color names to RGB values
-AGENT_COLOURS = [
-    np.array([60, 182, 234]),  # Blue
-    np.array([229, 52, 52]),  # Red
-    np.array([144, 32, 249]),  # Purple
-    np.array([69, 196, 60]),  # Green
-    np.array([252, 227, 35]),  # Yellow
-]
+
 
 
 class WorldObj(minigrid.WorldObj):
@@ -148,7 +142,7 @@ class Agent(WorldObj):
     # Rotate the agent based on its direction
     tri_fn = rendering.rotate_fn(
         tri_fn, cx=0.5, cy=0.5, theta=0.5 * math.pi * self.dir)
-    color = AGENT_COLOURS[self.agent_id]
+    color = minigrid.COLORS[list(minigrid.COLORS.keys())[self.agent_id]] #AGENT_COLOURS[self.agent_id] CHARLIE FIXME I changed this so that the adversary can pick the color for the agent
     rendering.fill_coords(img, tri_fn, color)
 
 
@@ -190,7 +184,9 @@ class Grid(minigrid.Grid):
       if isinstance(highlight, list):
         for a, agent_highlight in enumerate(highlight):
           if agent_highlight:
-            rendering.highlight_img(img, color=AGENT_COLOURS[a])
+            raise NotImplementedError("charlie messed up")
+            # CHARLIE FIXME this should not happen (?)
+            #rendering.highlight_img(img, color=COLORS[a])
       else:
         # Default highlighting for agent's partially observed views
         rendering.highlight_img(img)
