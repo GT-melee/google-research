@@ -251,12 +251,12 @@ class AdversarialEnv(multigrid.MultiGridEnv):
 
     # map loc to color
     color_str = list(minigrid.COLORS.keys())[loc % 6]
-    # FIXME
+    # FIXME the dynamic funcs do this...
     """
     AttributeError: Can't pickle local object 'AdversarialEnv.pick_color.<locals>.gen_goal'
 
   In call to configurable 'eager_compute' (<function eager_compute at 0x7f5864e05ca0>)
-  In call to configurable 'train_eval' (<function train_eval at 0x7f594c86c1f0>)
+  In call to configurable 'train_eval' (<function train_eval at 0x7f594c86c1f0>) 
     """
     if object_id == 1:
       def gen_goal():
