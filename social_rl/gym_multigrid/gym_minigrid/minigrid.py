@@ -19,21 +19,15 @@ COLORS = {
     'purple': np.array([112, 39, 195]),
     'yellow': np.array([255, 255, 0]),
     'grey'  : np.array([100, 100, 100]),
-    "black" : np.array([0,0,0])
+    "black" : np.array([0,0,0]),
+    "teal" : np.array([100, 200, 255]),
+    "chartreuse": np.array([111, 222, 123]),
+    "lamourestbrun": np.array([222,222,0])
 }
 
 COLOR_NAMES = sorted(list(COLORS.keys()))
 
-# Used to map colors to integers
-COLOR_TO_IDX = {
-    'red'   : 0,
-    'green' : 1,
-    'blue'  : 2,
-    'purple': 3,
-    'yellow': 4,
-    'grey'  : 5,
-    "black": 6
-}
+COLOR_TO_IDX = {key: i for i, key in enumerate(COLOR_NAMES)}    # big dict energy
 
 IDX_TO_COLOR = dict(zip(COLOR_TO_IDX.values(), COLOR_TO_IDX.keys()))
 
