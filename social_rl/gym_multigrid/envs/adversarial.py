@@ -15,7 +15,6 @@
 
 # Lint as: python3
 """An environment which is built by a learning adversary.
-
 Has additional functions, step_adversary, and reset_agent. How to use:
 1. Call reset() to reset to an empty environment
 2. Call step_adversary() to place the goal, agent, and obstacles. Repeat until
@@ -28,18 +27,18 @@ Has additional functions, step_adversary, and reset_agent. How to use:
 import random
 
 import gym
-import gym_minigrid.minigrid as minigrid
 import networkx as nx
 from networkx import grid_graph
 import numpy as np
 
 from social_rl.gym_multigrid import multigrid
 from social_rl.gym_multigrid import register
+from social_rl.gym_multigrid.gym_minigrid import minigrid
+from social_rl.gym_multigrid.gym_minigrid.minigrid import COLORS, Grid
 
 
 class AdversarialEnv(multigrid.MultiGridEnv):
   """Grid world where an adversary build the environment the agent plays.
-
   The adversary places the goal, agent, and up to n_clutter blocks in sequence.
   The action dimension is the number of squares in the grid, and each action
   chooses where the next item should be placed.
@@ -48,7 +47,6 @@ class AdversarialEnv(multigrid.MultiGridEnv):
   def __init__(self, n_clutter=50, size=15, agent_view_size=5, max_steps=250,
                goal_noise=0., random_z_dim=50, choose_goal_last=False):
     """Initializes environment in which adversary places goal, agent, obstacles.
-
     Args:
       n_clutter: The maximum number of obstacles the adversary can place.
       size: The number of tiles across one side of the grid; i.e. make a
@@ -139,6 +137,8 @@ class AdversarialEnv(multigrid.MultiGridEnv):
 
   def reset(self):
     """Fully resets the environment to an empty grid with no agent or goal."""
+    self.used_colors = set()
+    self.doing_shifts = True
     self.graph = grid_graph(dim=[self.width-2, self.height-2])
     self.wall_locs = []
 
@@ -160,7 +160,7 @@ class AdversarialEnv(multigrid.MultiGridEnv):
     # 'fixed_environment' is True.
     self._gen_grid(self.width, self.height)
 
-    image = self.grid.encode()
+    image = self.grid.encode(False) # TODO you can change False to True if the env does not use a domain shift
     obs = {
         'image': image,
         'time_step': [self.adversary_step_count],
@@ -245,118 +245,89 @@ class AdversarialEnv(multigrid.MultiGridEnv):
   def generate_random_z(self):
     return np.random.uniform(size=(self.random_z_dim,)).astype(np.float32)
 
-  def pick_color(self, loc, object_id):
-    if object_id == 0:
-      return
-
-    # map loc to color
-    color_str = list(minigrid.COLORS.keys())[loc % 6]
-    # FIXME the dynamic funcs do this...
-    """
-    AttributeError: Can't pickle local object 'AdversarialEnv.pick_color.<locals>.gen_goal'
-
-  In call to configurable 'eager_compute' (<function eager_compute at 0x7f5864e05ca0>)
-  In call to configurable 'train_eval' (<function train_eval at 0x7f594c86c1f0>) 
-    """
-    if object_id == 1:
-      self.goal_color_str = color_str
-    elif object_id == 2:
-      self.wall_color_str = color_str
-    elif object_id == 3:
-      pass
-
   def gen_goal(self):
-    g = minigrid.Goal()
-    g.color = self.goal_color_str
-    return g
+      return minigrid.Goal(self.goal_color)
   def gen_wall(self):
-    g = minigrid.Wall()
-    g.color = self.wall_color_str
-    return g
-
+      return minigrid.Wall(self.wall_color)
 
   def step_adversary(self, loc):
     """The adversary gets n_clutter + 2 moves to place the goal, agent, blocks.
-
     The action space is the number of possible squares in the grid. The squares
     are numbered from left to right, top to bottom.
-
     Args:
       loc: An integer specifying the location to place the next object which
         must be decoded into x, y coordinates.
-
     Returns:
       Standard RL observation, reward (always 0), done, and info
     """
+
     if loc >= self.adversary_action_dim:
       raise ValueError('Position passed to step_adversary is outside the grid.')
-
-    # CHARLIE: to add the domain shift, what we'll do is actually just add three steps to each run, and during these
-    # additionnal steps we'll map 'loc' to a set of shifts. So the adv will output '4', it'll be mapped to 'purple', and
-    # it'll choose "wall, goals, agent" in sequence.
 
     # Add offset of 1 for outside walls
     x = int(loc % (self.width - 2)) + 1
     y = int(loc / (self.width - 2)) + 1
     done = False
 
-    should_choose_colors = 0
-    if self.choose_goal_last:
-      should_choose_goal = self.adversary_step_count == self.adversary_max_steps - 4
-      should_choose_agent = self.adversary_step_count == self.adversary_max_steps - 5
+    if self.doing_shifts and self.adversary_step_count < 3:   # this toggles if there's a domain shift or not
 
-      if self.adversary_step_count == self.adversary_max_steps - 1:
-        should_choose_colors = 1
-      elif self.adversary_step_count == self.adversary_max_steps - 2:
-        should_choose_colors = 2
-      elif self.adversary_step_count == self.adversary_max_steps - 3:
-        should_choose_colors = 3
-
-    else:
-      should_choose_goal = self.adversary_step_count == 3
-      should_choose_agent = self.adversary_step_count == 4
+      color_str = list(COLORS.keys())[loc % len(COLORS)]
+      counter = 1
+      while color_str in self.used_colors:
+        color_str = list(COLORS.keys())[(loc+counter) % len(COLORS)]
+        counter += 1
+      self.used_colors.add(color_str)
 
       if self.adversary_step_count == 0:
-        should_choose_colors = 1
+        self.wall_color = color_str
+        self.grid.wall_rect(0, 0, self.width, self.height, self.gen_wall)
       elif self.adversary_step_count == 1:
-        should_choose_colors = 2
+        self.goal_color = color_str
       elif self.adversary_step_count == 2:
-        should_choose_colors = 3
+        self.floor_color = color_str
+        self.grid.floor_color = self.floor_color
+        Grid.tile_cache = {}
 
-    if should_choose_colors != 0:
-      self.pick_color(loc, should_choose_colors)
-
-    # Place goal
-    elif should_choose_goal:
-      # If there is goal noise, sometimes randomly place the goal
-      if random.random() < self.goal_noise:
-        self.goal_pos = self.place_obj(self.gen_goal(), max_tries=100) #self.goal_pos = self.place_obj(minigrid.Goal(), max_tries=100)
+    else: # if we're not choosing a color, we're putting down a tile
+      if self.choose_goal_last:
+        should_choose_goal = self.adversary_step_count == self.adversary_max_steps - 2
+        should_choose_agent = self.adversary_step_count == self.adversary_max_steps - 1
+        raise NotImplementedError("CHARLIE SAYS THIS DOES NOT HAPPEN BUT SHE'S AN IDIOT")
       else:
+        should_choose_goal = self.adversary_step_count == (0 if not self.doing_shifts else 3)
+        should_choose_agent = self.adversary_step_count == (1 if not self.doing_shifts else 4)
+
+      # Place goal
+      if should_choose_goal:
+        # If there is goal noise, sometimes randomly place the goal
+        if random.random() < self.goal_noise:
+          self.goal_pos = self.place_obj(self.gen_goal(), max_tries=100)
+        else:
+          self.remove_wall(x, y)  # Remove any walls that might be in this loc
+          self.put_obj(self.gen_goal(), x, y)
+          self.goal_pos = (x, y)
+
+      # Place the agent
+      elif should_choose_agent:
         self.remove_wall(x, y)  # Remove any walls that might be in this loc
-        self.put_obj(minigrid.Goal(), x, y)
-        self.goal_pos = (x, y)
 
-    # Place the agent
-    elif should_choose_agent:
-      self.remove_wall(x, y)  # Remove any walls that might be in this loc
+        # Goal has already been placed here
+        if self.grid.get(x, y) is not None:
+          # Place agent randomly
+          self.agent_start_pos = self.place_one_agent(0, rand_dir=False)
+          self.deliberate_agent_placement = 0
+        else:
+          self.agent_start_pos = np.array([x, y])
+          self.place_agent_at_pos(0, self.agent_start_pos, rand_dir=False)
+          self.deliberate_agent_placement = 1
 
-      # Goal has already been placed here
-      if self.grid.get(x, y) is not None:
-        # Place agent randomly
-        self.agent_start_pos = self.place_one_agent(0, rand_dir=False)
-        self.deliberate_agent_placement = 0
-      else:
-        self.agent_start_pos = np.array([x, y])
-        self.place_agent_at_pos(0, self.agent_start_pos, rand_dir=False)
-        self.deliberate_agent_placement = 1
-
-    # Place wall
-    elif self.adversary_step_count < self.adversary_max_steps:
-      # If there is already an object there, action does nothing
-      if self.grid.get(x, y) is None:
-        self.put_obj(self.gen_wall(), x, y)
-        self.n_clutter_placed += 1
-        self.wall_locs.append((x-1, y-1))
+      # Place wall
+      elif self.adversary_step_count < self.adversary_max_steps:
+        # If there is already an object there, action does nothing
+        if self.grid.get(x, y) is None:
+          self.put_obj(self.gen_wall(), x, y)
+          self.n_clutter_placed += 1
+          self.wall_locs.append((x-1, y-1))
 
     self.adversary_step_count += 1
 
@@ -368,7 +339,7 @@ class AdversarialEnv(multigrid.MultiGridEnv):
         self.graph.remove_node(w)
       self.compute_shortest_path()
 
-    image = self.grid.encode()
+    image = self.grid.encode(False) # TODO change this if env was not shifted
     obs = {
         'image': image,
         'time_step': [self.adversary_step_count],
@@ -415,7 +386,6 @@ class AdversarialEnv(multigrid.MultiGridEnv):
 
 class ReparameterizedAdversarialEnv(AdversarialEnv):
   """Grid world where an adversary builds the environment the agent plays.
-
   In this version, the adversary takes an action for each square in the grid.
   There is no limit on the number of blocks it can place. The action space has
   dimension 4; at each step the adversary can place the goal, agent, a wall, or
@@ -469,18 +439,15 @@ class ReparameterizedAdversarialEnv(AdversarialEnv):
 
   def step_adversary(self, action):
     """The adversary gets a step for each available square in the grid.
-
     At each step it chooses whether to place the goal, the agent, a block, or
     nothing. If it chooses agent or goal and they have already been placed, they
     will be moved to the new location.
-
     Args:
       action: An integer in range 0-3 specifying which object to place:
         0 = goal
         1 = agent
         2 = wall
         3 = nothing
-
     Returns:
       Standard RL observation, reward (always 0), done, and info
     """

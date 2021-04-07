@@ -17,8 +17,7 @@
 """The walls are secretly lava, but they look to the agent like walls.
 """
 
-import gym_minigrid.minigrid as minigrid
-import gym_minigrid.rendering as rendering
+from social_rl.gym_multigrid.gym_minigrid import minigrid, rendering
 from social_rl.gym_multigrid import multigrid
 from social_rl.gym_multigrid.register import register
 

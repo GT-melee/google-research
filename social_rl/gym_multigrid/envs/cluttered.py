@@ -17,7 +17,7 @@
 """Multi-agent goal-seeking task with many static obstacles.
 """
 
-import gym_minigrid.minigrid as minigrid
+from social_rl.gym_multigrid.gym_minigrid import minigrid
 from social_rl.gym_multigrid import multigrid
 from social_rl.gym_multigrid.register import register
 

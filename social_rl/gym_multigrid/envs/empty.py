@@ -14,13 +14,13 @@
 # limitations under the License.
 
 # Lint as: python3
-"""Implements the multi-agent version of minigrid empty environments.
+"""Implements the multi-agent version of gym_minigrid empty environments.
 
 These have a goal which can be fixed or at a random location, and are otherwise
 empty.
 """
 import math
-import gym_minigrid.minigrid as minigrid
+from social_rl.gym_multigrid.gym_minigrid import minigrid
 import numpy as np
 from social_rl.gym_multigrid import multigrid
 from social_rl.gym_multigrid.register import register

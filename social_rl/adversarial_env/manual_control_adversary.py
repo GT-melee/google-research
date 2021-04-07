@@ -161,6 +161,7 @@ def main(args):
 
       obs, _, done, _ = env.step_adversary(int(action))
       plt.imshow(env.render('rgb_array'))
+      plt.show()
       print(env)
 
       if env.adversary_step_count > 1 and not env.choose_goal_last:
@@ -214,6 +215,7 @@ def main(args):
 
       reward_hist.append(rewards)
       plt.imshow(env.render('rgb_array'))
+      plt.show()
       print('Step:', i)
       print('Rewards:', rewards)
       print('Collective reward history:', reward_hist)

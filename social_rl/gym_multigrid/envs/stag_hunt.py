@@ -18,7 +18,7 @@
 
 One agent must toggle the stag while another agent is adjacent.
 """
-import gym_minigrid.minigrid as minigrid
+from social_rl.gym_multigrid.gym_minigrid import minigrid
 import numpy as np
 from social_rl.gym_multigrid import multigrid
 from social_rl.gym_multigrid.register import register

@@ -14,14 +14,11 @@
 # limitations under the License.
 
 """Implements the multi-agent version of the Grid and MultiGridEnv classes.
-
 Note that at each step, the environment expects an array of actions equal to the
 number of agents with which the class was initialized. Similarly, it will return
 an array of observations, and an array of rewards.
-
 In the competitive version, as soon as one agent finds the goal, the game is
 over.
-
 In the non-competitive case, all episodes have a fixed length based on the
 maximum number of steps. To avoid issues with some agents finishing early and
 therefore requiring support for non-scalar step types, if an agent finishes
@@ -29,19 +26,25 @@ before the step deadline it will be respawned in a new location. To make the
 single-agent case comparable to this design, it should also run for a fixed
 number of steps and allow the agent to find the goal as many times as possible
 within this step budget.
-
 Unlike Minigrid, Multigrid does not include the string text of the 'mission'
 with each observation.
 """
 import math
 
 import gym
-import gym_minigrid.minigrid as minigrid
-import gym_minigrid.rendering as rendering
 import numpy as np
 
 # Map of color names to RGB values
+from social_rl.gym_multigrid.gym_minigrid import minigrid, rendering
+from social_rl.gym_multigrid.gym_minigrid.minigrid import COLORS
 
+AGENT_COLOURS = [
+    np.array([60, 182, 234]),  # Blue
+    np.array([229, 52, 52]),  # Red
+    np.array([144, 32, 249]),  # Purple
+    np.array([69, 196, 60]),  # Green
+    np.array([252, 227, 35]),  # Yellow
+]
 
 
 class WorldObj(minigrid.WorldObj):
@@ -101,7 +104,7 @@ class WorldObj(minigrid.WorldObj):
 
 
 class Door(minigrid.Door):
-  """Extends minigrid Door class to multiple agents possibly carrying keys."""
+  """Extends gym_minigrid Door class to multiple agents possibly carrying keys."""
 
   def toggle(self, env, pos, carrying):
     # If the player has the right key to open the door
@@ -142,16 +145,21 @@ class Agent(WorldObj):
     # Rotate the agent based on its direction
     tri_fn = rendering.rotate_fn(
         tri_fn, cx=0.5, cy=0.5, theta=0.5 * math.pi * self.dir)
-    color = minigrid.COLORS[list(minigrid.COLORS.keys())[self.agent_id]] #AGENT_COLOURS[self.agent_id] CHARLIE FIXME I changed this so that the adversary can pick the color for the agent
+    color = AGENT_COLOURS[self.agent_id]
     rendering.fill_coords(img, tri_fn, color)
 
 
 class Grid(minigrid.Grid):
   """Extends Grid class, overrides some functions to cope with multi-agent case."""
 
+  def __init__(self, width, height, floor_color="black"):
+    super(Grid, self).__init__(width, height)
+    self.floor_color = floor_color
+
   @classmethod
   def render_tile(cls,
                   obj,
+                  floor_color,
                   highlight=None,
                   tile_size=minigrid.TILE_PIXELS,
                   subdivs=3,
@@ -178,15 +186,15 @@ class Grid(minigrid.Grid):
 
     if obj is not None and obj.type != 'agent':
       obj.render(img)
+    else:
+      rendering.fill_coords(img, rendering.point_in_rect(0,1,0,1), COLORS[floor_color])
 
     # Highlight the cell if needed (do not highlight walls)
     if highlight and not (cell_type is not None and cell_type == 'wall'):
       if isinstance(highlight, list):
         for a, agent_highlight in enumerate(highlight):
           if agent_highlight:
-            raise NotImplementedError("charlie messed up")
-            # CHARLIE FIXME this should not happen (?)
-            #rendering.highlight_img(img, color=COLORS[a])
+            rendering.highlight_img(img, color=AGENT_COLOURS[a])
       else:
         # Default highlighting for agent's partially observed views
         rendering.highlight_img(img)
@@ -208,13 +216,11 @@ class Grid(minigrid.Grid):
              tile_size,
              highlight_mask=None):
     """Render this grid at a given scale.
-
     Args:
       tile_size: Tile size in pixels.
       highlight_mask: An array of binary masks, showing which part of the grid
         should be highlighted for each agent. Can also be used in partial
         observation for single agent, which must be handled differently.
-
     Returns:
       An image of the rendered Grid.
     """
@@ -242,6 +248,7 @@ class Grid(minigrid.Grid):
 
         tile_img = Grid.render_tile(
             cell,
+          self.floor_color,
             highlight=highlights,
             tile_size=tile_size,
             cell_type=cell_type,
@@ -257,6 +264,7 @@ class Grid(minigrid.Grid):
 
   @staticmethod
   def decode(array):
+    raise NotImplementedError("IS CHARLIE A DUMMY?")
     """Decode an array grid encoding back into a grid."""
 
     width, height, channels = array.shape
@@ -334,7 +342,6 @@ class MultiGridEnv(minigrid.MiniGridEnv):
       fully_observed=False
   ):
     """Constructor for multi-agent gridworld environment generator.
-
     Args:
       grid_size: Number of tiles for the width and height of the square grid.
       width: Number of tiles across grid width.
@@ -354,7 +361,7 @@ class MultiGridEnv(minigrid.MiniGridEnv):
         environment is generated, so it will remain constant / be the same
         environment each time.
       minigrid_mode: Set to True to maintain backwards compatibility with
-        minigrid in the single agent case.
+        gym_minigrid in the single agent case.
       fully_observed: If True, each agent will receive an observation of the
         full environment state, rather than a partially observed, ego-centric
         observation.
@@ -392,7 +399,7 @@ class MultiGridEnv(minigrid.MiniGridEnv):
     self.direction_obs_space = gym.spaces.Box(
         low=0, high=3, shape=(self.n_agents,), dtype='uint8')
 
-    # Maintain for backwards compatibility with minigrid.
+    # Maintain for backwards compatibility with gym_minigrid.
     self.minigrid_mode = minigrid_mode
     if self.fully_observed:
       obs_image_shape = (width, height, 3)
@@ -400,7 +407,7 @@ class MultiGridEnv(minigrid.MiniGridEnv):
       obs_image_shape = (self.agent_view_size, self.agent_view_size, 3)
 
     if self.minigrid_mode:
-      msg = 'Backwards compatibility with minigrid only possible with 1 agent'
+      msg = 'Backwards compatibility with gym_minigrid only possible with 1 agent'
       assert self.n_agents == 1, msg
 
       # Single agent case
@@ -495,10 +502,8 @@ class MultiGridEnv(minigrid.MiniGridEnv):
 
   def __str__(self):
     """Produce a pretty string of the environment's grid along with the agent.
-
     A grid cell is represented by 2-character string, the first one for
     the object and the second one for the color.
-
     Returns:
       String representation of the grid.
     """
@@ -561,7 +566,6 @@ class MultiGridEnv(minigrid.MiniGridEnv):
                 reject_fn=None,
                 max_tries=math.inf):
     """Place an object at an empty position in the grid.
-
     Args:
       obj: Instance of Minigrid WorldObj class (such as Door, Key, etc.).
       top: (x,y) position of the top-left corner of rectangle where to place.
@@ -569,7 +573,6 @@ class MultiGridEnv(minigrid.MiniGridEnv):
       reject_fn: Function to filter out potential positions.
       max_tries: Throw an error if a position can't be found after this many
         tries.
-
     Returns:
       Position where object was placed.
     """
@@ -625,9 +628,7 @@ class MultiGridEnv(minigrid.MiniGridEnv):
 
   def place_agent(self, top=None, size=None, rand_dir=True, max_tries=math.inf):
     """Set the starting point of all agents in the world.
-
     Name chosen for backwards compatibility.
-
     Args:
       top: (x,y) position of the top-left corner of rectangle where agents can
         be placed.
@@ -674,7 +675,6 @@ class MultiGridEnv(minigrid.MiniGridEnv):
   @property
   def dir_vec(self):
     """Get the direction vector for the agent (points toward forward movement).
-
     Returns:
       An array of directions that each agent is facing.
     """
@@ -701,18 +701,14 @@ class MultiGridEnv(minigrid.MiniGridEnv):
 
   def get_view_coords(self, i, j, agent_id):
     """Convert grid coordinates into agent's partially observed view.
-
     Translate and rotate absolute grid coordinates (i, j) into the agent's
     partially observable view (sub-grid).
-
     Note that the resulting coordinates may be negative or outside of the
     agent's view size.
-
     Args:
       i: Integer x coordinate.
       j: Integer y coordinate.
       agent_id: ID of the agent.
-
     Returns:
       Agent-centric coordinates.
     """
@@ -739,12 +735,9 @@ class MultiGridEnv(minigrid.MiniGridEnv):
 
   def get_view_exts(self, agent_id):
     """Get the extents of the square set of tiles visible to the agent.
-
     Note: the bottom extent indices are not included in the set
-
     Args:
       agent_id: Integer ID of the agent.
-
     Returns:
       Top left and bottom right (x,y) coordinates of set of visible tiles.
     """
@@ -774,12 +767,10 @@ class MultiGridEnv(minigrid.MiniGridEnv):
 
   def relative_coords(self, x, y, agent_id):
     """Check if a grid position belongs to the agent's field of view.
-
     Args:
       x: Integer x coordinate.
       y: Integer y coordinate.
       agent_id: ID of the agent.
-
     Returns:
       The corresponding agent-centric coordinates of the grid position.
     """
@@ -967,13 +958,10 @@ class MultiGridEnv(minigrid.MiniGridEnv):
 
   def gen_obs_grid(self, agent_id):
     """Generate the sub-grid observed by the agent.
-
     This method also outputs a visibility mask telling us which grid cells
     the agent can actually see.
-
     Args:
       agent_id: Integer ID of the agent for which to generate the grid.
-
     Returns:
       Sub-grid and visibility mask.
     """
@@ -1039,17 +1027,15 @@ class MultiGridEnv(minigrid.MiniGridEnv):
 
   def gen_agent_obs(self, agent_id):
     """Generate the agent's view (partially observed, low-resolution encoding).
-
     Args:
       agent_id: ID of the agent for which to generate the observation.
-
     Returns:
       3-dimensional partially observed agent-centric view, and int direction
     """
     grid, vis_mask = self.gen_obs_grid(agent_id)
 
     # Encode the partially observable view into a numpy array
-    image = grid.encode(vis_mask)
+    image = grid.encode(False, vis_mask)  # CHARLIE TODO toggle this on-off for shift and not-shift
 
     return image, self.agent_dir[agent_id]
 

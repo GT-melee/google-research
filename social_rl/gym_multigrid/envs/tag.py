@@ -14,12 +14,12 @@
 # limitations under the License.
 
 # Lint as: python3
-"""Implements a minigrid tag environment.
+"""Implements a gym_minigrid tag environment.
 
 The agents are split into two teams, where one team is rewarded for being
 near the other team and the other team has a symmetric penalty.
 """
-import gym_minigrid.minigrid as minigrid
+from social_rl.gym_multigrid.gym_minigrid import minigrid
 import numpy as np
 from social_rl.gym_multigrid import multigrid
 from social_rl.gym_multigrid.register import register

@@ -14,13 +14,13 @@
 # limitations under the License.
 
 # Lint as: python3
-"""Implements the multi-agent version of minigrid four rooms environments.
+"""Implements the multi-agent version of gym_minigrid four rooms environments.
 
 This environment is a classic exploration problem where the goal must be located
 in one of four rooms.
 """
 
-import gym_minigrid.minigrid as minigrid
+from social_rl.gym_multigrid.gym_minigrid import minigrid
 from social_rl.gym_multigrid import multigrid
 from social_rl.gym_multigrid.register import register
 

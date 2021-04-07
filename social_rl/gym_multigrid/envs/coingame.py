@@ -21,7 +21,7 @@ round, each agent is assigned a color. The agents are rewarded for picking up
 their color or teammates' colors.
 """
 import gym
-import gym_minigrid.minigrid as minigrid
+from social_rl.gym_multigrid.gym_minigrid import minigrid
 import numpy as np
 from social_rl.gym_multigrid import multigrid
 from social_rl.gym_multigrid.register import register

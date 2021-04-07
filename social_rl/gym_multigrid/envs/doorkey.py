@@ -14,13 +14,13 @@
 # limitations under the License.
 
 # Lint as: python3
-"""Implements the multi-agent version of minigrid doorkey environments.
+"""Implements the multi-agent version of gym_minigrid doorkey environments.
 
 These have a goal on the other side of a door that must be opened with a key.
 """
 import math
 
-import gym_minigrid.minigrid as minigrid
+from social_rl.gym_multigrid.gym_minigrid import minigrid
 from social_rl.gym_multigrid import multigrid
 from social_rl.gym_multigrid.register import register
 
