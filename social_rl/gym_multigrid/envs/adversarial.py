@@ -278,6 +278,7 @@ class AdversarialEnv(multigrid.MultiGridEnv):
         counter += 1
       self.used_colors.add(color_str)
 
+      # TODO to do a static shift, we can just
       if self.adversary_step_count == 0:
         self.wall_color = color_str
         self.grid.wall_rect(0, 0, self.width, self.height, self.gen_wall)
