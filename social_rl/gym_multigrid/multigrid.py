@@ -1035,6 +1035,7 @@ class MultiGridEnv(minigrid.MiniGridEnv):
     grid, vis_mask = self.gen_obs_grid(agent_id)
 
     # Encode the partially observable view into a numpy array
+    grid.floor_color = self.floor_color #must pass floor color through. This subgrid is the basic minigrid grid, that's kinda dumb
     image = grid.encode(False, vis_mask)  # CHARLIE TODO toggle this on-off for shift and not-shift
 
     return image, self.agent_dir[agent_id]
