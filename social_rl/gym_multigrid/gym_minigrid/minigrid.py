@@ -107,7 +107,7 @@ class WorldObj:
 
     def encode(self):
         """Encode the a description of this object as a 3-tuple of integers"""
-        return (OBJECT_TO_IDX[self.type], COLOR_TO_IDX[self.color], 0)
+        return (COLOR_TO_IDX[self.color], COLOR_TO_IDX[self.color], 0)
 
     @staticmethod
     def decode(type_idx, color_idx, state):
@@ -249,7 +249,7 @@ class Door(WorldObj):
         elif not self.is_open:
             state = 1
 
-        return (OBJECT_TO_IDX[self.type], COLOR_TO_IDX[self.color], state)
+        return (COLOR_TO_IDX[self.color], COLOR_TO_IDX[self.color], state)
 
     def render(self, img):
         c = COLORS[self.color]
@@ -553,16 +553,12 @@ class Grid:
                     v = self.get(i, j)
 
                     if v is None:
-                        array[i, j, 0] = OBJECT_TO_IDX['empty'] if is_not_shifted else COLOR_TO_IDX[self.floor_color]
-                        array[i, j, 1] = 0 if is_not_shifted else COLOR_TO_IDX[self.floor_color]
+                        array[i, j, 0] = COLOR_TO_IDX[self.floor_color]
+                        array[i, j, 1] = COLOR_TO_IDX[self.floor_color]
                         array[i, j, 2] = 0
 
                     else:
                         encoding = v.encode()
-
-                        if not is_not_shifted: # this means that the object uuid is now its color
-                            encoding = (encoding[1], encoding[1], encoding[2])
-
                         array[i, j, :] = encoding
 
         return array
