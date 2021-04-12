@@ -26,6 +26,7 @@ COLORS = {
 }
 
 COLOR_NAMES = sorted(list(COLORS.keys()))
+print(COLOR_NAMES)
 
 COLOR_TO_IDX = {key: i for i, key in enumerate(COLOR_NAMES)}    # big dict energy
 
