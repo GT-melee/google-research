@@ -94,7 +94,7 @@ def run_agent_on_env(agent, env):
   done = False
   rewards = []
 
-  timestep = env.reset()
+  timestep = env.reset_agent()
   policy_state = agent.get_initial_state(1)
 
   while not done:
@@ -102,7 +102,7 @@ def run_agent_on_env(agent, env):
 
     policy_state = policy_step.state
 
-    timestep = env.step(policy_step.action)
+    next_timestep = env.step(policy_step.action)
     #rewards.append(reward)
   return np.array(rewards)
 
