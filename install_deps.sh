@@ -16,8 +16,8 @@
 set -e
 set -x
 
-python3 -m venv ./venv-social-rl
-source ./venv-social-rl/bin/activate
+python3 -m venv ./venv
+source ./venv/bin/activate
 
 pip install tf-nightly==2.5.0.dev20210326
 pip install tb-nightly==2.5.0a20210405
