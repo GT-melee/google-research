@@ -38,7 +38,7 @@ import pandas as pd
 import tensorflow as tf  # tf
 
 from tf_agents.environments import tf_py_environment
-from tf_agents.google.utils import mp4_video_recorder
+#from tf_agents.google.utils import mp4_video_recorder
 from tf_agents.trajectories import time_step as ts_lib
 from tf_agents.trajectories import trajectory
 
@@ -54,10 +54,10 @@ flags.DEFINE_string(
     'root_dir', None,
     'Directory where videos and transfer results will be saved')
 flags.mark_flag_as_required('root_dir')
-flags.DEFINE_string(
-    'hparam_csv', None,
-    'Required to determine which checkpoints to load.')
-flags.mark_flag_as_required('hparam_csv')
+#flags.DEFINE_string(
+#    'hparam_csv', None,
+#    'Required to determine which checkpoints to load.')
+#flags.mark_flag_as_required('hparam_csv')
 flags.DEFINE_string(
     'transfer_csv', None,
     'If provided, will load this csv and continue saving to it')
@@ -685,7 +685,7 @@ def load_existing_transfer_file(transfer_dir, transfer_csv, test_on_test=False,
 
 def generate_results(root_dir, experiments, test_on_test=False, test_mini=False,
                      transfer_csv=None, debug=False, num_trials=25,
-                     name='', hparam_csv=None, fill_in_missing=False,
+                     name='', fill_in_missing=False,
                      metric='SolvedPathLength_best_ever', reverse_order=False):
   """Generates transfer results for all experiments, saves videos and a csv.
 
@@ -742,6 +742,7 @@ def generate_results(root_dir, experiments, test_on_test=False, test_mini=False,
     df, transfer_df_path = load_existing_transfer_file(
         transfer_dir, transfer_csv, test_on_test, mini_str, name)
 
+  """
   # Open hparam file and format experiment IDs
   with tf.gfile.GFile(hparam_csv, 'rb') as f:
     hparam_df = pd.read_csv(f)
@@ -785,6 +786,7 @@ def generate_results(root_dir, experiments, test_on_test=False, test_mini=False,
     print('Calculated that experiment', exp.name, 'has', exp.num_agents,
           'agents, based on:')
     print(settings_dict)
+    
 
   # Find a checkpoint such that all benchmark experiments have the equivalent
   # checkpoint for each experiment
@@ -821,7 +823,7 @@ def generate_results(root_dir, experiments, test_on_test=False, test_mini=False,
 
   if reverse_order:
     experiments = experiments[::-1]
-
+  """
   for i, exp in enumerate(experiments):  #
     for ckpt in checkpoints_to_check[exp.exp_id]:
       # Assign checkpoint to checkpoint nums before loading
@@ -968,7 +970,6 @@ def main(_):
 
   generate_results(FLAGS.root_dir, experiments,
                    transfer_csv=FLAGS.transfer_csv,
-                   hparam_csv=FLAGS.hparam_csv,
                    test_on_test=FLAGS.test_on_test, test_mini=FLAGS.test_mini,
                    debug=FLAGS.debug, num_trials=FLAGS.num_trials,
                    name=FLAGS.name, fill_in_missing=FLAGS.fill_in_missing,

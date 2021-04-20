@@ -24,4 +24,4 @@ set -x
 
 #python3 -m social_rl.multiagent_tfagents.test_multiagent
 
-python3 -m social_rl.adversarial_env.train_adversarial_env --debug --root_dir=/home/charlie/SDRIVE/datasets/no_shift
+python3 -m social_rl.adversarial_env.train_adversarial_env --debug --root_dir=/home/charlie/SDRIVE/datasets/dynamic_shift_apr19

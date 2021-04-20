@@ -562,4 +562,4 @@ def main(_):
 
 if __name__ == '__main__':
   flags.mark_flag_as_required('root_dir')
-  system_multiprocessing.handle_main(lambda : app.run(main))
+  system_multiprocessing.handle_main(lambda x: app.run(main))
