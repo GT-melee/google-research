@@ -9,13 +9,14 @@ import numpy as np
 from tf_agents.policies import policy_loader
 from social_rl import gym_multigrid
 import matplotlib.pyplot as plt
-from tf_agents.trajectories import time_step as ts_lib
+from tf_agents.trajectories import time_step as ts_lib, trajectory
+
 tf.compat.v1.enable_v2_behavior()
 #source_shift = []
 #target_shift = []
 from social_rl.adversarial_env import adversarial_env
 
-all_source_agents = ["/home/charlie/SDRIVE/datasets/no_shift/policy_saved_model/agent/0/policy_000499950"]
+all_source_agents = ["/home/charlie/SDRIVE/datasets/any_shifts/paired/policy_saved_model/adversary_env/0/policy_000499950"]
 all_variable_agents = []
 
 all_source_agents = [tf.compat.v2.saved_model.load(a) for a in all_source_agents]
@@ -50,6 +51,7 @@ def get_envs():
     #for shift in [source_shift, target_shift]:
     py_env = adversarial_env.load("MultiGrid-Adversarial-v0")
     tf_env = adversarial_env.AdversarialTFPyEnvironment(py_env)
+    tf_env.reset()
 
     done = False
     for s in sequence:
@@ -100,9 +102,18 @@ def run_agent_on_env(agent, env):
   while not done:
     policy_step = agent.action(timestep, policy_state=policy_state)
 
+    #print("printy")
+    plt.imshow(env.render('rgb_array')[0])
+    plt.show()
+
+
     policy_state = policy_step.state
 
-    next_timestep = env.step(policy_step.action)
+    next_time_step = env._step(policy_step.action)
+    #traj = trajectory.from_transition(timestep, policy_step, next_time_step)
+    timestep = next_time_step
+
+
     #rewards.append(reward)
   return np.array(rewards)
 
