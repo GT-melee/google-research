@@ -232,6 +232,10 @@ def train_eval(
         'ShortestPassablePathLength',
         'SolvedPathLength',
         'TrainEpisodesCollected',
+        # TODO: add domain shifts  (is here the right spot?)
+        #'ColorGoal',
+        #'ColorWall',
+        #'ColorFloor'
     ]
     env_train_metrics = []
     env_eval_metrics = []
