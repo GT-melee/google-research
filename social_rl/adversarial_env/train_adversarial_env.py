@@ -248,7 +248,7 @@ def train_eval(
 
         # Create (populations of) both agents that learn to navigate the environment
         agents = {}
-        for agent_name in ["agent", "adversary_agent"]:
+        for agent_name in ["agent", "adversary_agent"]:  # TODO: defines the name of the agent
             if agent_name == "adversary_agent" and (
                 domain_randomization or unconstrained_adversary or combined_population
             ):
@@ -306,6 +306,8 @@ def train_eval(
             agents["adversary_env"] = []
             for i in range(adversary_population_size):
                 logging.info("Creating adversary environment %d", i)
+
+                # TODO: DAVID this is where they create the adversarial envs; do NOT want 'adversary_agent'
                 agents["adversary_env"].append(
                     agent_train_package.AgentTrainPackage(
                         tf_env,
@@ -313,7 +315,7 @@ def train_eval(
                         root_dir,
                         step_metrics,
                         name="adversary_env",
-                        is_environment=True,
+                        is_environment=True,  # TODO: useful flag
                         use_rnn=adversary_env_rnn,
                         use_tf_functions=use_tf_functions,
                         max_steps=gym_env.adversary_max_steps,
@@ -465,6 +467,8 @@ def train_eval(
                         agent.loss_divergence_counter = 0
 
                 # Log train metrics to tensorboard
+                # TODO: tensorboard stuff logged here
+                #   -> I think this just instantiates the steps as zero or whats loaded from the checkpoints
                 for train_metric in agent.train_metrics:
                     train_metric.tf_summaries(train_step=global_step, step_metrics=step_metrics)
                 if agent.is_environment:
@@ -568,4 +572,4 @@ def main(_):
 
 if __name__ == "__main__":
     flags.mark_flag_as_required("root_dir")
-    system_multiprocessing.handle_main(lambda x: app.run(main))
+    system_multiprocessing.handle_main(lambda : app.run(main))

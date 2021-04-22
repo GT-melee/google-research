@@ -120,6 +120,8 @@ class AdversarialDriver(object):
     def adversarial_episode(self):
         """Episode in which adversary constructs environment and agents play it."""
         # Build environment with adversary.
+        # TODO: builds envs here; this is what we care about
+        import ipdb; ipdb.set_trace()
         _, _, env_idx = self.run_agent(self.env, self.adversary_env, self.env.reset, self.env.step_adversary)
         train_idxs = {"adversary_env": [env_idx]}
 
@@ -158,6 +160,7 @@ class AdversarialDriver(object):
             env_reward += self.compute_adversary_block_budget(adv_agent_r_max, env_idx)
 
         # Minimax adversary reward.
+        #   -> presumably don't touch this
         else:
             env_reward = -agent_r_avg
 
@@ -165,7 +168,7 @@ class AdversarialDriver(object):
 
         # Log metrics to tensorboard.
         if self.collect:
-            self.adversary_env[env_idx].env_train_metric(env_reward)
+            self.adversary_env[env_idx].env_train_metric(env_reward)  # TODO: example of collecting metrics
         else:
             self.adversary_env[env_idx].env_eval_metric(env_reward)
 
@@ -350,6 +353,9 @@ class AdversarialDriver(object):
           The average reward achieved, the maximum reward, and the index of the
             agent selected.
         """
+        # what is called when the adversary creates the environment
+        # _, _, env_idx = self.run_agent(self.env, self.adversary_env, self.env.reset, self.env.step_adversary)
+
         if agent_idx is None:
             agent_idx = np.random.choice(len(agent_list))
         agent = agent_list[agent_idx]
@@ -370,8 +376,17 @@ class AdversarialDriver(object):
         avg_reward = tf.zeros_like(time_step.reward)
         max_reward = tf.zeros_like(time_step.reward)
 
+        domain_shift_steps = 0
+        if env.doing_shifts:
+            domain_shift_steps = 3
+
         while num_steps < agent.max_steps:
             action_step = policy.action(time_step, policy_state)
+            # TODO: this is the adversary step
+            if num_steps < domain_shift_steps:
+                logging.info(f"\t\tApplying domain shift. Step: {num_steps}; Color: {1}")
+
+            # the action: action_step.action
             next_time_step = step_func(action_step.action)
 
             # Replace with terminal timestep to manually end episode (enables

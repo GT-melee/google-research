@@ -123,7 +123,7 @@ class AgentTrainPackage(object):
         self.name = name
         self.id = id_num
         self.max_steps = max_steps
-        self.is_environment = is_environment
+        self.is_environment = is_environment  # TODO: care about this
         self.replace_reward = replace_reward
         self.non_negative_regret = non_negative_regret
         self.block_budget_weight = block_budget_weight
@@ -205,13 +205,18 @@ class AgentTrainPackage(object):
             self.eval_metrics = [
                 tf_metrics.AverageEpisodeLengthMetric(batch_size=num_eval_episodes, name=name + "_AverageEpisodeLength")
             ]
-            if is_environment:
+            if is_environment:  # TODO: modify here!
+                # seems to only be defined here... where else does this get used?
+                #   -> in adversarial driver!
                 self.env_train_metric = adversarial_eval.AdversarialEnvironmentScalar(
                     batch_size=num_parallel_envs, name=name + "_AdversaryReward"
                 )
                 self.env_eval_metric = adversarial_eval.AdversarialEnvironmentScalar(
                     batch_size=num_eval_episodes, name=name + "_AdversaryReward"
                 )
+
+                # TODO: DAVID: add metrics for the domain shifts
+
             else:
                 self.train_metrics.append(
                     tf_metrics.AverageReturnMetric(batch_size=num_parallel_envs, name=name + "_AverageReturn")

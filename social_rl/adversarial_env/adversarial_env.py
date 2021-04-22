@@ -216,6 +216,9 @@ class AdversarialGymWrapper(gym_wrapper.GymWrapper):
         else:
             return ts_lib.transition(observation, reward, self._discount, outer_dims=outer_dims)
 
+    @property
+    def domain_shifts(self):
+        return self._gym_env.domain_shifts
 
 @gin.configurable
 class AdversarialBatchedPyEnvironment(batched_py_environment.BatchedPyEnvironment):
