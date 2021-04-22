@@ -181,7 +181,6 @@ def train_eval(
   if root_dir is None:
     raise AttributeError('train_eval requires a root_dir.')
 
-  import ipdb; ipdb.set_trace()
   gym_env = adversarial_env.load(env_name)
 
   # Set up logging

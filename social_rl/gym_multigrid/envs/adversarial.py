@@ -138,6 +138,7 @@ class AdversarialEnv(multigrid.MultiGridEnv):
   def reset(self):
     """Fully resets the environment to an empty grid with no agent or goal."""
     self.used_colors = set()
+    # TODO: change shit here
     self.doing_shifts = True
 
     self.graph = grid_graph(dim=[self.width-2, self.height-2])
@@ -167,6 +168,7 @@ class AdversarialEnv(multigrid.MultiGridEnv):
       self.grid.floor_color = "black"
       self.floor_color = "black"
 
+    # TODO: apparently dgaf
     image = self.grid.encode(False) # TODO you can change False to True if the env does not use a domain shift
     obs = {
         'image': image,
