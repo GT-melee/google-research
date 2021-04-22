@@ -32,6 +32,7 @@ environments, like the shortest path length to the goal.
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
+import logging
 
 import gin
 import gym
@@ -216,9 +217,15 @@ class AdversarialGymWrapper(gym_wrapper.GymWrapper):
         else:
             return ts_lib.transition(observation, reward, self._discount, outer_dims=outer_dims)
 
-    @property
+    # TODO: @busycalibrating - hacky workaround to access this value from the underlying gym object
     def domain_shifts(self):
-        return self._gym_env.domain_shifts
+        doing_shifts = False
+        try:
+            doing_shifts = self._gym_env.doing_shifts
+        except AttributeError as e:
+            logging.error("The env does not have 'doing_shifts' attribute - defaults to False")
+        return doing_shifts
+ 
 
 @gin.configurable
 class AdversarialBatchedPyEnvironment(batched_py_environment.BatchedPyEnvironment):

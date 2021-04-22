@@ -63,6 +63,7 @@ class AdversarialEnv(multigrid.MultiGridEnv):
         goal_noise=0.0,
         random_z_dim=50,
         choose_goal_last=False,
+        domain_shifts: bool = True,
     ):
         """Initializes environment in which adversary places goal, agent, obstacles.
         Args:
@@ -79,6 +80,12 @@ class AdversarialEnv(multigrid.MultiGridEnv):
             adversary. This gives the dimension of that vector.
           choose_goal_last: If True, will place the goal and agent as the last
             actions, rather than the first actions.
+          domain_shifts: Set to True if training with domain shifts. This will make
+            the first 3 actions of step_adversary() select the colors of:
+                1. Wall
+                2. Goal
+                3. Floor
+            
         """
         self.agent_start_pos = None
         self.goal_pos = None
@@ -89,6 +96,12 @@ class AdversarialEnv(multigrid.MultiGridEnv):
 
         # Add two actions for placing the agent and goal.
         self.adversary_max_steps = self.n_clutter + 2
+
+        # WARNING: 'self.doing_shifts' is now used in 
+        #   - 'social_rl/adversarial_env/adversarial_env.py'
+        #   - 'social_rl/adversarial_env/adversarial_parallel_env.py'
+        # for logging purposes
+        self.doing_shifts = domain_shifts
 
         super().__init__(
             n_agents=1,
@@ -126,6 +139,10 @@ class AdversarialEnv(multigrid.MultiGridEnv):
         # NetworkX graph used for computing shortest path
         self.graph = grid_graph(dim=[size - 2, size - 2])
         self.wall_locs = []
+    
+    # TODO: @busycalibrating - hacky workaround to access this value from the underlying gym object
+    def domain_shifts(self):
+        return self.doing_shifts
 
     def _gen_grid(self, width, height):
         """Grid is initially empty, because adversary will create it."""
@@ -156,9 +173,8 @@ class AdversarialEnv(multigrid.MultiGridEnv):
         """Fully resets the environment to an empty grid with no agent or goal."""
         self.used_colors = set()
 
-        # WARNING: 'self.doing_shifts' is now used in 'social_rl/adversarial_env/adversarial_driver.py'
-        # for logging purposes
-        self.doing_shifts = True
+        # moved to init method
+        # self.doing_shifts = True
 
         self.graph = grid_graph(dim=[self.width - 2, self.height - 2])
         self.wall_locs = []

@@ -188,6 +188,20 @@ class AdversarialParallelPyEnvironment(py_environment.PyEnvironment):
         self._current_time_step = self._stack_time_steps(time_steps)
         return self._current_time_step
 
+    # TODO: @busycalibrating - hacky workaround to access this value from the underlying gym object
+    def domain_shifts(self):
+        shifts = None
+
+        try:
+            shifts = [env.domain_shifts(self._blocking) for env in self._envs]
+            if not self._blocking:
+                shifts = [promise() for promise in shifts]
+
+        except AttributeError as e:
+            logging.error(f"Some or all envs don't have domain shifts:\n\n{e}")
+
+        return shifts
+            
     def step_adversary(self, actions):
         """Forward a batch of actions to the wrapped environments.
 
@@ -468,6 +482,14 @@ class AdversarialProcessPyEnvironment(object):
         else:
             return promise
 
+    # TODO: @busycalibrating - hacky workaround to access this value from the underlying gym object
+    def domain_shifts(self, blocking=True):
+        promise = self.call("domain_shifts")
+        if blocking:
+            return promise()
+        else:
+            return promise
+
     def _receive(self):
         """Wait for a message from the worker process and return its payload.
 
@@ -518,13 +540,17 @@ class AdversarialProcessPyEnvironment(object):
                     name, args, kwargs = payload
                     if self._flatten and name == "step":
                         args = [tf.nest.pack_sequence_as(action_spec, args[0])]
+
                     elif self._flatten and name == "step_adversary":
                         args = [tf.nest.pack_sequence_as(env.adversary_action_spec, args[0])]
+
                     result = getattr(env, name)(*args, **kwargs)
                     if self._flatten and name in ["step", "reset", "step_advesary", "reset_agent", "reset_random"]:
                         result = tf.nest.flatten(result)
+
                     conn.send((self._RESULT, result))
                     continue
+
                 if message == self._CLOSE:
                     assert payload is None
                     env.close()
