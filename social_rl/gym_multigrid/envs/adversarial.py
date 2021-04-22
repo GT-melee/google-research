@@ -287,11 +287,14 @@ class AdversarialEnv(multigrid.MultiGridEnv):
 
       # TODO to do a static shift, we can just
       if self.adversary_step_count == 0:
+        print(f"Setting wall color: {color_str}")
         self.wall_color = color_str
         self.grid.wall_rect(0, 0, self.width, self.height, self.gen_wall)
       elif self.adversary_step_count == 1:
+        print(f"Setting goal_color: {color_str}")
         self.goal_color = color_str
       elif self.adversary_step_count == 2:
+        print(f"Setting floor color: {color_str}")
         self.floor_color = color_str
         self.grid.floor_color = self.floor_color
         Grid.tile_cache = {}
