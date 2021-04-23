@@ -24,6 +24,7 @@ Has additional functions, step_adversary, and reset_agent. How to use:
 4. If required, call reset_agent() to reset the environment the way the
    adversary designed it. A new agent can now play it using the step() function.
 """
+import logging
 import random
 
 import gym
@@ -74,7 +75,7 @@ class AdversarialEnv(multigrid.MultiGridEnv):
         goal_noise=0.0,
         random_z_dim=50,
         choose_goal_last=False,
-        domain_shifts: bool = True,
+        domain_shifts: bool = False,
     ):
         """Initializes environment in which adversary places goal, agent, obstacles.
         Args:
@@ -112,6 +113,7 @@ class AdversarialEnv(multigrid.MultiGridEnv):
         #   - 'social_rl/adversarial_env/adversarial_env.py'
         #   - 'social_rl/adversarial_env/adversarial_parallel_env.py'
         # for logging purposes
+        logging.info(f"Initializing env with domain shifts: {domain_shifts}")
         self.doing_shifts = domain_shifts
 
         super().__init__(

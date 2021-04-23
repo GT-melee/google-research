@@ -216,6 +216,7 @@ class AgentTrainPackage(object):
                 )
 
                 # TODO: DAVID: add metrics for the domain shifts
+                # self.env_train_
 
             else:
                 self.train_metrics.append(

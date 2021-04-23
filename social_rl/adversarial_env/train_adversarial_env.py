@@ -185,7 +185,8 @@ def train_eval(
     if root_dir is None:
         raise AttributeError("train_eval requires a root_dir.")
 
-    gym_env = adversarial_env.load(env_name)
+    gym_kwargs = {"domain_shifts": adv_domain_shift}
+    gym_env = adversarial_env.load(env_name, gym_kwargs=gym_kwargs)
 
     # Set up logging
     root_dir = os.path.expanduser(root_dir)
@@ -207,12 +208,12 @@ def train_eval(
         logging.info("Creating %d environments...", num_parallel_envs)
         eval_tf_env = adversarial_env.AdversarialTFPyEnvironment(
             adversarial_env_parallel.AdversarialParallelPyEnvironment(
-                [lambda: adversarial_env.load(env_name)] * num_eval_episodes
+                [lambda: adversarial_env.load(env_name, gym_kwargs=gym_kwargs)] * num_eval_episodes
             )
         )
         tf_env = adversarial_env.AdversarialTFPyEnvironment(
             adversarial_env_parallel.AdversarialParallelPyEnvironment(
-                [lambda: adversarial_env.load(env_name)] * num_parallel_envs
+                [lambda: adversarial_env.load(env_name, gym_kwargs=gym_kwargs)] * num_parallel_envs
             )
         )
 
@@ -359,6 +360,7 @@ def train_eval(
         else:
             adversary_env = agents["adversary_env"]
 
+        # TODO: builds the training driver
         collect_driver = adversarial_driver.AdversarialDriver(
             tf_env,
             agents["agent"],
@@ -432,6 +434,8 @@ def train_eval(
             if debug:
                 logging.info("Collecting at step %d", global_step_val)
             start_time = time.time()
+
+            # TODO: collects the episode
             train_idxs = collect_driver.run(random_episodes=random_episodes)
             collect_time += time.time() - start_time
             if debug:
@@ -565,6 +569,7 @@ def main(_):
         antagonist_population_size=FLAGS.antagonist_population_size,
         combined_population=FLAGS.combined_population,
         block_budget_weight=FLAGS.block_budget_weight,
+        adv_domain_shift=FLAGS.domain_shifts,
         num_train_steps=FLAGS.num_train_steps,
         collect_episodes_per_iteration=FLAGS.collect_episodes_per_iteration,
         num_parallel_envs=FLAGS.num_parallel_envs,
