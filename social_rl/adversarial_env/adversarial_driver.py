@@ -25,6 +25,7 @@ adversary and the agents.
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
+from social_rl.gym_multigrid.gym_minigrid.minigrid import IDX_TO_COLOR
 
 from absl import logging
 
@@ -35,6 +36,8 @@ from tf_agents.trajectories import time_step as ts_lib
 from tf_agents.trajectories import trajectory
 from tf_agents.utils import common
 from tf_agents.utils import nest_utils
+
+from social_rl.gym_multigrid.envs.adversarial import COLORS, COLOR_NAMES, ADV_STEPS, COLOR_TO_IDX
 
 
 class AdversarialDriver(object):
@@ -356,6 +359,7 @@ class AdversarialDriver(object):
         # what is called when the adversary creates the environment
         # _, _, env_idx = self.run_agent(self.env, self.adversary_env, self.env.reset, self.env.step_adversary)
 
+
         if agent_idx is None:
             agent_idx = np.random.choice(len(agent_list))
         agent = agent_list[agent_idx]
@@ -377,17 +381,44 @@ class AdversarialDriver(object):
         max_reward = tf.zeros_like(time_step.reward)
 
         domain_shift_steps = 0
-        if env.doing_shifts:
+        # access the bools denoting if we're doing shifts from the parallel envs...
+        # there might be multiple? idk why
+        doing_shifts = env.domain_shifts()
+
+        # check if all returned values are identical
+        if not doing_shifts.count(doing_shifts[0]) == len(doing_shifts):
+            raise RuntimeError("Something messed up and your envs are whack (some are domain shifted some aren't")
+        doing_shifts = doing_shifts[0]        
+
+        if doing_shifts:
             domain_shift_steps = 3
 
+        # TODO: this is the adversary step
         while num_steps < agent.max_steps:
             action_step = policy.action(time_step, policy_state)
-            # TODO: this is the adversary step
-            if num_steps < domain_shift_steps:
-                logging.info(f"\t\tApplying domain shift. Step: {num_steps}; Color: {1}")
 
-            # the action: action_step.action
             next_time_step = step_func(action_step.action)
+
+            # @busycalibrating - test logging of this stuff
+            # If domain shifted, doing first 3 steps and logging here
+            if num_steps < domain_shift_steps:
+                step_idx = int(num_steps.numpy())  # convert to an integer
+                color_idxs = action_step.action.numpy()  # raw policy values
+
+                step = ADV_STEPS[step_idx]  # get string equivalent (wall, goal, floor) of first 3 steps
+                
+                # Returns a list of dicts with the keys corresponding to wall, goal, floor as above, 
+                # values being the color string
+                domain_settings = env.domain_settings()
+
+                # extract the color we care about from the list of dicts
+                colors = [single_env[step] for single_env in domain_settings] 
+
+                # convert color to its int equivalent
+                processed_color_idxs = [COLOR_TO_IDX[c] for c in colors]
+
+                #colors = [IDX_TO_COLOR[i] for i in color_idxs]
+                logging.info(f"Applying domain shift:\n\t\tStep: {step_idx} ({step}); Color: {processed_color_idxs} ({colors})")
 
             # Replace with terminal timestep to manually end episode (enables
             # artificially decreasing number of steps for one of the agents).

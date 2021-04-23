@@ -226,6 +226,14 @@ class AdversarialGymWrapper(gym_wrapper.GymWrapper):
             logging.error("The env does not have 'doing_shifts' attribute - defaults to False")
         return doing_shifts
  
+    def domain_settings(self):
+        settings = None
+        try:
+            settings = self._gym_env.domain_settings()
+        except AttributeError as e:
+            logging.error("The env does not have 'doing_settings' method - defaults to None")
+        return settings
+ 
 
 @gin.configurable
 class AdversarialBatchedPyEnvironment(batched_py_environment.BatchedPyEnvironment):

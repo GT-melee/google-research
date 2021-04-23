@@ -79,6 +79,10 @@ flags.DEFINE_boolean(
 flags.DEFINE_boolean(
     "domain_randomization", False, "If True, do not use adversarial training, just randomize" "block positions."
 )
+# @busycalibrating - added domain shifts as a cmd line arg
+flags.DEFINE_boolean(
+    "domain_shifts", True, "If True, allows the adversary to also modify the environment colours."
+)
 flags.DEFINE_float("percent_random_episodes", 0.0, "The % of episodes trained with domain randomization.")
 flags.DEFINE_boolean(
     "no_adversary_rnn", False, "If True, will not use an RNN to parameterize the " "adversary environment"
@@ -143,6 +147,7 @@ def train_eval(
     adv_conv_kernel=3,
     adv_timestep_fc=10,
     adv_entropy_regularization=0.0,
+    adv_domain_shift:bool = False,   # @busycalibrating - added domain shifts as cmd line arg
     # Params for collect
     num_train_steps=500000,
     collect_episodes_per_iteration=30,

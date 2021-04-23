@@ -202,6 +202,19 @@ class AdversarialParallelPyEnvironment(py_environment.PyEnvironment):
 
         return shifts
             
+    def domain_settings(self):
+        settings = None
+
+        try:
+            settings = [env.domain_settings(self._blocking) for env in self._envs]
+            if not self._blocking:
+                settings = [promise() for promise in settings]
+
+        except AttributeError as e:
+            logging.error(f"Some or all envs don't have domain settings:\n\n{e}")
+
+        return settings
+            
     def step_adversary(self, actions):
         """Forward a batch of actions to the wrapped environments.
 
@@ -489,6 +502,14 @@ class AdversarialProcessPyEnvironment(object):
             return promise()
         else:
             return promise
+    
+    def domain_settings(self, blocking=True):
+        promise = self.call("domain_settings")
+        if blocking:
+            return promise()
+        else:
+            return promise
+ 
 
     def _receive(self):
         """Wait for a message from the worker process and return its payload.

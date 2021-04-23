@@ -46,6 +46,17 @@ from social_rl.gym_multigrid.gym_minigrid.minigrid import (
     IDX_TO_OBJECT,
 )
 
+WALL = "wall"
+GOAL = "goal"
+FLOOR = "floor"
+
+
+ADV_STEPS = {
+    0: WALL,
+    1: GOAL,
+    2: FLOOR,
+}
+
 
 class AdversarialEnv(multigrid.MultiGridEnv):
     """Grid world where an adversary build the environment the agent plays.
@@ -202,6 +213,10 @@ class AdversarialEnv(multigrid.MultiGridEnv):
             self.wall_color = "grey"
             self.grid.floor_color = "black"
             self.floor_color = "black"
+        else:
+            self.goal_color = None
+            self.wall_color = None
+            self.floor_color = None
 
         image = self.grid.encode(False)  # TODO you can change False to True if the env does not use a domain shift
         obs = {"image": image, "time_step": [self.adversary_step_count], "random_z": self.generate_random_z()}
@@ -290,6 +305,10 @@ class AdversarialEnv(multigrid.MultiGridEnv):
 
     def gen_wall(self):
         return minigrid.Wall(self.wall_color)
+    
+    def domain_settings(self):
+        settings = {WALL: self.wall_color, GOAL: self.goal_color, FLOOR: self.floor_color}
+        return settings
 
     def step_adversary(self, loc):
         """The adversary gets n_clutter + 2 moves to place the goal, agent, blocks.
