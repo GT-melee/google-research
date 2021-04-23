@@ -25,6 +25,7 @@ adversary and the agents.
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
+from social_rl.adversarial_env.agent_train_package import AgentTrainPackage
 from social_rl.gym_multigrid.gym_minigrid.minigrid import IDX_TO_COLOR
 
 from absl import logging
@@ -37,7 +38,40 @@ from tf_agents.trajectories import trajectory
 from tf_agents.utils import common
 from tf_agents.utils import nest_utils
 
-from social_rl.gym_multigrid.envs.adversarial import COLORS, COLOR_NAMES, ADV_STEPS, COLOR_TO_IDX
+from social_rl.gym_multigrid.envs.adversarial import COLORS, COLOR_NAMES, ADV_STEPS, COLOR_TO_IDX, WALL, GOAL, FLOOR
+
+
+def _all_equal(x: list):
+    return x.count(x[0]) == len(x)
+
+
+# @busycalibrating - logging colours
+def log_colors(domain_settings: list, train: bool, package: AgentTrainPackage):
+    # Returns a list of dicts with the keys corresponding to wall, goal, floor as above, 
+    # values being the color string
+
+    # extract the color we care about from the list of dicts
+    wall_colors = [single_env[WALL] for single_env in domain_settings] 
+    goal_colors = [single_env[GOAL] for single_env in domain_settings] 
+    floor_colors = [single_env[FLOOR] for single_env in domain_settings] 
+
+    # check to make sure all colors are the same for now
+    consistent = _all_equal(wall_colors) and _all_equal(goal_colors) and _all_equal(floor_colors)
+    if not consistent:
+        raise RuntimeError(f"Some color configs are whack: {domain_settings}")
+
+    wall_color = wall_colors[0]
+    goal_color = goal_colors[0]
+    floor_color = floor_colors[0]
+
+    color_str = f"{wall_color},{goal_color},{floor_color}"
+
+    # collect mode is 'collecting trajectories', i.e. training. If False -> eval mode
+    mode = "eval"
+    if train:
+        mode = "train"
+
+    package.log_colors(color_str, mode)
 
 
 class AdversarialDriver(object):
@@ -124,9 +158,11 @@ class AdversarialDriver(object):
         """Episode in which adversary constructs environment and agents play it."""
         # Build environment with adversary.
         # TODO: builds envs here; this is what we care about
-        import ipdb; ipdb.set_trace()
         _, _, env_idx = self.run_agent(self.env, self.adversary_env, self.env.reset, self.env.step_adversary)
         train_idxs = {"adversary_env": [env_idx]}
+
+        # @busycalibrating - log colors here
+        log_colors(self.env.domain_settings(), self.collect, self.adversary_env[env_idx])
 
         # Run protagonist in generated environment.
         agent_r_avg, agent_r_max, agent_idx = self.run_agent(self.env, self.agent, self.env.reset_agent, self.env.step)
@@ -386,7 +422,7 @@ class AdversarialDriver(object):
         doing_shifts = env.domain_shifts()
 
         # check if all returned values are identical
-        if not doing_shifts.count(doing_shifts[0]) == len(doing_shifts):
+        if not _all_equal(doing_shifts):
             raise RuntimeError("Something messed up and your envs are whack (some are domain shifted some aren't")
         doing_shifts = doing_shifts[0]        
 

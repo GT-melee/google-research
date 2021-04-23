@@ -205,6 +205,13 @@ class AgentTrainPackage(object):
             self.eval_metrics = [
                 tf_metrics.AverageEpisodeLengthMetric(batch_size=num_eval_episodes, name=name + "_AverageEpisodeLength")
             ]
+
+            self.train_dir = os.path.join(root_dir, "train", name, str(id_num))
+            self.eval_dir = os.path.join(root_dir, "eval", name, str(id_num))
+
+            os.makedirs(self.train_dir, exist_ok=True)
+            os.makedirs(self.eval_dir, exist_ok=True)
+
             if is_environment:  # TODO: modify here!
                 # seems to only be defined here... where else does this get used?
                 #   -> in adversarial driver!
@@ -215,8 +222,9 @@ class AgentTrainPackage(object):
                     batch_size=num_eval_episodes, name=name + "_AdversaryReward"
                 )
 
-                # TODO: DAVID: add metrics for the domain shifts
-                # self.env_train_
+                # @busycalibrating - adding color logging in a janky way 
+                self.color_train = os.path.join(self.train_dir, "color_dump.csv")
+                self.color_eval = os.path.join(self.eval_dir, "color_dump.csv")
 
             else:
                 self.train_metrics.append(
@@ -229,8 +237,6 @@ class AgentTrainPackage(object):
             self.metrics_group = metric_utils.MetricsGroup(self.train_metrics, name + "_train_metrics")
             self.observers = self.train_metrics + [self.replay_buffer.add_batch]
 
-            self.train_dir = os.path.join(root_dir, "train", name, str(id_num))
-            self.eval_dir = os.path.join(root_dir, "eval", name, str(id_num))
             self.train_checkpointer = common.Checkpointer(
                 ckpt_dir=self.train_dir,
                 agent=self.tf_agent,
@@ -251,6 +257,25 @@ class AgentTrainPackage(object):
             self.total_loss = None
             self.extra_loss = None
             self.loss_divergence_counter = 0
+
+
+    # @busycalibrating - janky logging
+    def log_colors(self, colors: str, mode: str = "train"):
+        """ Note that it will just write colors with a newline; this should be formatted before
+        passed to this method
+        """
+        if not self.is_environment:
+            raise NotImplementedError("Trying to log colors to a non-environment AgentTrainPackage")
+    
+        fp = self.color_train if mode == "train" else self.color_eval
+
+        # Write column headers
+        if not os.path.exists(fp):
+            colors = "wall,goal,floor\n" + colors
+
+        with open(fp, "a") as f:
+            f.writelines(colors + "\n")
+        
 
     def train_step(self):
         """Collects trajectories and trains the agent on them."""

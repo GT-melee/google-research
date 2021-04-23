@@ -81,7 +81,7 @@ flags.DEFINE_boolean(
 )
 # @busycalibrating - added domain shifts as a cmd line arg
 flags.DEFINE_boolean(
-    "domain_shifts", True, "If True, allows the adversary to also modify the environment colours."
+    "domain_shifts", False, "If True, allows the adversary to also modify the environment colours."
 )
 flags.DEFINE_float("percent_random_episodes", 0.0, "The % of episodes trained with domain randomization.")
 flags.DEFINE_boolean(
@@ -184,6 +184,8 @@ def train_eval(
 
     if root_dir is None:
         raise AttributeError("train_eval requires a root_dir.")
+
+    logging.info("\n\n" + "-" * 80 + f"\n\t\t\tDOMAIN SHIFT: {adv_domain_shift}\n" + "-" * 80 + "\n")
 
     gym_kwargs = {"domain_shifts": adv_domain_shift}
     gym_env = adversarial_env.load(env_name, gym_kwargs=gym_kwargs)
