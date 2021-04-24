@@ -34,7 +34,7 @@ import numpy as np
 from social_rl.gym_multigrid import multigrid
 from social_rl.gym_multigrid import register
 from social_rl.gym_multigrid.gym_minigrid import minigrid
-from social_rl.gym_multigrid.gym_minigrid.minigrid import COLORS, Grid
+from social_rl.gym_multigrid.gym_minigrid.minigrid import COLORS, Grid, COLOR_NAMES
 
 
 class AdversarialEnv(multigrid.MultiGridEnv):
@@ -138,7 +138,8 @@ class AdversarialEnv(multigrid.MultiGridEnv):
   def reset(self):
     """Fully resets the environment to an empty grid with no agent or goal."""
     self.used_colors = set()
-    self.doing_shifts = True
+    self.doing_shifts = False
+    self.doing_randomization = True
 
     self.graph = grid_graph(dim=[self.width-2, self.height-2])
     self.wall_locs = []
@@ -166,6 +167,20 @@ class AdversarialEnv(multigrid.MultiGridEnv):
       self.wall_color = "grey"
       self.grid.floor_color = "black"
       self.floor_color = "black"
+      Grid.tile_cache = {}
+      self.grid.wall_rect(0, 0, self.width, self.height, self.gen_wall)
+
+    if self.doing_randomization:
+      numbers = set()
+      while (len(numbers) < 3):
+        numbers.add(random.randint(0, len(COLORS)-1))
+      numbers = list(numbers)
+      self.goal_color = COLOR_NAMES[numbers[0]]
+      self.wall_color = COLOR_NAMES[numbers[1]]
+      self.grid.floor_color = COLOR_NAMES[numbers[2]]
+      self.floor_color = COLOR_NAMES[numbers[2]]
+      Grid.tile_cache = {}
+      self.grid.wall_rect(0, 0, self.width, self.height, self.gen_wall)
 
     image = self.grid.encode(False) # TODO you can change False to True if the env does not use a domain shift
     obs = {
