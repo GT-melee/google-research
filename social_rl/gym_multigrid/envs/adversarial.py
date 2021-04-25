@@ -138,7 +138,7 @@ class AdversarialEnv(multigrid.MultiGridEnv):
   def reset(self):
     """Fully resets the environment to an empty grid with no agent or goal."""
     self.used_colors = set()
-    self.doing_shifts = True
+    self.doing_shifts = False
 
     self.graph = grid_graph(dim=[self.width-2, self.height-2])
     self.wall_locs = []

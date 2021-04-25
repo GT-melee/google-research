@@ -24,4 +24,5 @@ set -x
 
 #python3 -m social_rl.multiagent_tfagents.test_multiagent
 
-python3 -m social_rl.adversarial_env.train_adversarial_env --debug --root_dir=$PAIRED
+#python3 -m social_rl.adversarial_env.train_adversarial_env --debug --root_dir=$PAIRED
+python3 -m social_rl.adversarial_env.static_shift_experiments --debug --root_dir=$PAIRED

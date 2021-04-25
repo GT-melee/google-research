@@ -16,7 +16,8 @@ tf.compat.v1.enable_v2_behavior()
 #target_shift = []
 from social_rl.adversarial_env import adversarial_env
 
-all_source_agents = ["/home/charlie/SDRIVE/datasets/any_shifts/paired/policy_saved_model/adversary_env/0/policy_000499950"]
+#all_source_agents = ["/home/charlie/SDRIVE/datasets/any_shifts/paired/policy_saved_model/adversary_env/0/policy_000499950"]
+all_source_agents  = ["/home/adam/Documents/2021-winter/ift-6756/gt-org/any_shifts_apr_17/paired/policy_saved_model/adversary_env/0/policy_000499950"]
 all_variable_agents = []
 
 all_source_agents = [tf.compat.v2.saved_model.load(a) for a in all_source_agents]
