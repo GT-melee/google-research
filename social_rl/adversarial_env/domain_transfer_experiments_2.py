@@ -18,6 +18,7 @@ from tf_agents.trajectories import time_step as ts_lib
 # gym stuff
 import gym
 from gym.wrappers.monitoring.video_recorder import VideoRecorder
+from tf_agents.typing.types import PyEnv
 
 # multigrid
 from social_rl import gym_multigrid
@@ -30,169 +31,184 @@ logging.basicConfig(level=logging.INFO)
 
 # Define the Environment loaders for base and adversarial environments
 class BaseEnv:
-    def __init__(self, name:str):
+    def __init__(self, name: str, video_fp: str = None, gym_kwargs=None):
         self.name = name
+        self.video_fp = video_fp
+        self.gym_kwargs = gym_kwargs
+
+        self.py_env = None
+        self.tf_env = None
 
     def make_env(self):
-        py_env = multiagent_gym_suite.load(self.name)
+        py_env = multiagent_gym_suite.load(self.name, gym_kwargs=self.gym_kwargs)
         tf_env = tf_py_environment.TFPyEnvironment(py_env)
+        py_env.reset()
         tf_env.reset()
+        if self.video_fp is not None:
+            py_env = VideoRecorder(py_env, self.video_fp)
+
+        self.py_env, self.tf_env = py_env, tf_env
         return py_env, tf_env
 
+    def close(self):
+        if self.py_env is not None:
+            self.py_env.close()
+
+
 class AdvEnv(BaseEnv):
-    def __init__(self, sequence: list, colors: list = None):
+    def __init__(self, sequence: list = None, adversary_agent = None, colors: list = None, video_fp: str = None):
         """
         Args:
             sequence: list of locs where to place the agent, goal, and then walls
             colors (optional): specifies the (wall, goal, floor) color
         """
-        super().__init__('MultiGrid-Adversarial-v0')
-        self.sequence = sequence
+        if colors is None:
+            # default color scheme
+            # colors = [5, 1, 6]
+            pass
+        
         self.colors = colors
 
-    def make_env(self):
         gym_kwargs = {}
         if self.colors is not None:
             gym_kwargs["domain_shifts"] = True
 
-        py_env = adversarial_env.load(self.name, gym_kwargs=gym_kwargs)
+        super().__init__(name='MultiGrid-Adversarial-v0', video_fp=video_fp, gym_kwargs=gym_kwargs)
+        
+        self.py_env = None
+        self.tf_env = None
+
+        # TODO: figure out if using sequence or agent
+        if sequence is not None and adversary_agent is not None:
+            raise TypeError
+        
+        self.agent = None
+        self.sequence = None
+        self.agent = None
+
+        if sequence is not None:
+            self.mode = "sequence"
+            self.sequence = sequence
+
+        elif adversary_agent is not None:
+            self.mode = "agent"
+            self.agent = adversary_agent
+        
+        else:
+            raise NotImplementedError
+
+    def make_env(self):
+        """Also starts video recorder"""
+        py_env = adversarial_env.load(self.name, gym_kwargs=self.gym_kwargs)
         tf_env = adversarial_env.AdversarialTFPyEnvironment(py_env)
 
+        py_env.reset()
         tf_env.reset()
+        if self.video_fp is not None:
+            py_env = VideoRecorder(py_env, self.video_fp)
 
-        if self.colors is not None:
-            for c in self.colors:
-                _, _, done, _ = tf_env.step_adversary(c)
-
-        for s in self.sequence:
-            _, _, done, _ = tf_env.step_adversary(s)
-        
+        self.py_env, self.tf_env = py_env, tf_env
         return py_env, tf_env
 
-####################################################################################################
 
-# TODO
-# source_shift = []
-# target_shift = []
+    def adversarial_steps(self):
+        if self.py_env is None and self.tf_env is None:
+            self.make_env()
+        
+        timestep = self.tf_env.reset()
 
+        # TODO: does not support color generating adversary yet
+        adv_iters = 50
+        if self.colors is not None:
+            adv_iters = 47
+            for c in self.colors:
+                timestep = self.tf_env.step_adversary(c)
+                if self.video_fp is not None:
+                    self.py_env.capture_frame()
 
-# all_source_agents = ["/home/charlie/SDRIVE/datasets/no_shift/policy_saved_model/agent/0/policy_000499950"]
-# all_source_agents = ["/home/ddobre/Projects/mila/game_theory/dynamic_shift/policy_000499950"]
-# all_source_agents = ["/home/ddobre/Projects/mila/game_theory/dynamic_shift/new_runs/policy_000038700"]
-#all_source_agents = [
-#    "/home/ddobre/Projects/mila/game_theory/dynamic_shift/new_runs/policy_000329400"
-#]
-all_source_agents = [
-    "/home/ddobre/Projects/game_theory/saved_models/static_shift/protagonist/policy_000289800"
-]
+        # TODO: process sequence or process agent
+        if self.mode == "sequence":
+            for s in self.sequence:
+                _, _, done, _ = self.tf_env.step_adversary(s)
+                if self.video_fp is not None:
+                    self.py_env.capture_frame()
 
+        elif self.mode == "agent":
+            # timestep = self.tf_env.reset()
+            policy_state = self.agent.get_initial_state(1)  
 
-all_variable_agents = []
+            actions = []
+            # steps = [timestep]
 
-all_source_agents = [tf.compat.v2.saved_model.load(a) for a in all_source_agents]
-all_variable_agents = [tf.compat.v2.saved_model.load(a) for a in all_variable_agents]
+            for i in range(adv_iters):
+                policy_step = self.agent.action(timestep, policy_state=policy_state)
 
-corridor = AdvEnv(sequence=[12, 0, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25],
-                  colors=[5, 1, 6])  # wall, goal, floor: gray, green, black
+                policy_state = policy_step.state
+                actions.append(policy_step.action.numpy()[0])
 
-cluttered10 = BaseEnv('MultiGrid-Cluttered10-Minigrid-v0')
-cluttered40 = BaseEnv('MultiGrid-Cluttered40-Minigrid-v0')
+                timestep = self.tf_env.step_adversary(policy_step.action)
+                _, rew, disc, obs = timestep
+                # steps.append(timestep)
+                # rewards.append(rew.numpy()[0])
 
+                # record video if relevant
+                if hasattr(self.py_env, "capture_frame"):
+                    self.py_env.capture_frame()
 
-# class Experiment:
-#     def __init__(self, 
-#                  name,
-#                  adv_env_name='MultiGrid-Adversarial-v0',
-#                  seeds: int = 0,
-#                  root_dir: str = None,
-#                  fps: int = 4):
-#         self.name = name
-#         self.adv_env_name = adv_env_name
-#         self.seeds = seeds
-#         self.fps = fps
+            print(actions)
 
-#         if root_dir is None:
-#             root_dir = "/tmp/adversarial_env/"
-#         self.root_dir = Path(root_dir)
-#         self.videos_dir = self.root_dir / "videos"
+        else:
+            raise NotImplementedError
 
-#         # TODO: models dir
+        return self.py_env, self.tf_env
 
-#     def load_agents(self):
-#         pass
-
-#     def run_agent(self,
-#                   policy,
-#                   recorder,
-#                   env_name,
-#                   py_env,
-#                   tf_env,
-#                   encoded_images=None):
-
-#         pass
-
-
-def get_envs(envs_list):
-    names = []
-    targets = []
-    sources = []
-
-#     gym_kwargs = {}
-#     if colors is not None:
-#         gym_kwargs["domain_shifts"] = True
-
-#     for i, sequence in enumerate(sequences):
-#         # for shift in [source_shift, target_shift]:
-#         py_env = adversarial_env.load("MultiGrid-Adversarial-v0", gym_kwargs=gym_kwargs)
-#         tf_env = adversarial_env.AdversarialTFPyEnvironment(py_env)
-
-#         tf_env.reset()
-
-#         done = False
-#         if colors is not None:
-#             for c in colors:
-#                 _, _, done, _ = tf_env.step_adversary(c)
-
-#         for s in sequence:
-#             _, _, done, _ = tf_env.step_adversary(s)
-
-#         # plt.imshow(tf_env.render('rgb_array'))
-#         # plt.show()
-# #        while not done:
-# #            _, _, done, _ = tf_env.step_adversary(s)
-
-#         plt.imshow(py_env.render())
-#         plt.show()
-
-#         # todo apply shift
-#         # targets.append(TODO)
-#         # sources.append(TODO)
-#         targets.append(tf_env)
-#         sources.append(tf_env)
-#         names.append(i)
-
-    for i, env in enumerate(envs_list): 
-        # each env in envs_list must be a BaseEnv or AdvEnv
-        if not isinstance(env, (BaseEnv, AdvEnv)):
-            raise TypeError
-
-        py_env, tf_env = env.make_env()
-        plt.imshow(py_env.render())
-        plt.show()
-
-        # todo apply shift
-        # targets.append(TODO)
-        # sources.append(TODO)
-        targets.append(tf_env)
-        sources.append(tf_env)
-        names.append(i)
-
-    return zip(sources, targets, names)
 
 
 def load_agent(checkpoint_path):
     agent = tf.compat.v2.saved_model.load(checkpoint_path)
     return agent
+
+
+def plot_obs(obs: ts_lib.TimeStep):
+    im = obs[3]['image'].numpy()[0].astype(np.float)
+    im = np.transpose(im / im.max(), (1,0,2))
+    plt.imshow(im)
+    plt.show()
+    return im
+
+
+def run_agent_on_env(agent, tf_env, py_env):
+    done = False
+    rewards = []
+
+    # make the environment
+    timestep = tf_env.reset_agent()
+    policy_state = agent.get_initial_state(1)
+
+    actions = []
+    steps = [timestep]
+    
+    #   while not done:
+    for i in range(100):
+        policy_step = agent.action(timestep, policy_state=policy_state)
+
+        policy_state = policy_step.state
+        actions.append(policy_step.action.numpy()[0])
+
+        timestep = tf_env.step(policy_step.action)
+        _, rew, disc, obs = timestep
+        steps.append(timestep)
+
+        rewards.append(rew.numpy()[0])
+
+        # record video if relevant
+        if hasattr(py_env, "capture_frame"):
+            py_env.capture_frame()
+        
+    print(actions)
+    print(rewards)
+ 
+    return steps
 
 
 def backwards_compatible_timestep(new_ts):
@@ -201,67 +217,28 @@ def backwards_compatible_timestep(new_ts):
     return ts_lib.TimeStep(new_ts.step_type, new_ts.reward, new_ts.discount, old_obs)
 
 
-def run_agent_on_env(agent, env):
-    done = False
-    rewards = []
+def main():
+    # TODO
+    # source_shift = []
+    # target_shift = []
+    
+    # all_source_agents = ["/home/charlie/SDRIVE/datasets/no_shift/policy_saved_model/agent/0/policy_000499950"]
+    # all_source_agents = ["/home/ddobre/Projects/mila/game_theory/dynamic_shift/policy_000499950"]
+    # all_source_agents = ["/home/ddobre/Projects/mila/game_theory/dynamic_shift/new_runs/policy_000038700"]
+    #all_source_agents = [
+    #    "/home/ddobre/Projects/mila/game_theory/dynamic_shift/new_runs/policy_000329400"
+    #]
 
+    agents_savedmodel = "/home/ddobre/Projects/game_theory/saved_models/static_shift/protagonist/policy_000289800"
+    agent = load_agent(agents_savedmodel)
 
-    # make the environment
-    # env.reset()
-    # env.step_adversary(adversarial_steps[0])
-    # env.step_adversary(adversarial_steps[1])
-    # for i in adversarial_steps[2:]:
-        # env.step_adversary(i)
-    # reset_img = env.render('rgb_array')
-   
-    timestep = env.reset_agent()
-    policy_state = agent.get_initial_state(1)
+    corridor = AdvEnv(sequence=[12, 0, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25],
+                      colors=[5, 1, 6],  # wall, goal, floor: gray, green, black
+                    #   video_fp="video.mp4"
+                )
 
-    plt.imshow(env.render()[0])
-    # plt.show()
- 
-    actions = []
+    cluttered10 = BaseEnv('MultiGrid-Cluttered10-Minigrid-v0')
+    cluttered40 = BaseEnv('MultiGrid-Cluttered40-Minigrid-v0')
 
-    #   while not done:
-    for i in range(100):
-        policy_step = agent.action(timestep, policy_state=policy_state)
-
-        policy_state = policy_step.state
-        actions.append(policy_step.action.numpy()[0])
-
-        timestep = env.step(policy_step.action)
-
-        plt.imshow(env.render()[0])
-        plt.show()
-        # rewards.append(reward)
-    print(actions)
-    plt.imshow(env.render()[0])
-    plt.show()
- 
-    return np.array(rewards)
-
-import ipdb; ipdb.set_trace()
-test_set = [corridor]
-by_env = {}
-for i, seq in enumerate(test_set):
-    by_env[i] = {}
-    for j, agent in enumerate(all_source_agents + all_variable_agents):
-        by_env[i] = {}
-        by_env[i]["source"] = {}
-        by_env[i]["target"] = {}
-
-
-def eval_agent(agent, agent_name):
-    global by_env
-
-    # TODO: fix
-    for source, target, env_name in get_envs(test_set):
-        source_rews = run_agent_on_env(agent, source)
-        target_rews = run_agent_on_env(agent, target)
-
-        by_env[env_name][agent_name]["source"] = source_rews
-        by_env[env_name][agent_name]["target"] = target_rews
-
-
-for i, agent in enumerate(all_source_agents + all_variable_agents):
-    eval_agent(agent, i)
+    pyenv, tfenv = corridor.make_env()
+    steps = run_agent_on_env(agent, tfenv, pyenv)
