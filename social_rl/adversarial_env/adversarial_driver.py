@@ -51,20 +51,26 @@ def log_colors(domain_settings: list, train: bool, package: AgentTrainPackage):
     # values being the color string
 
     # extract the color we care about from the list of dicts
-    wall_colors = [single_env[WALL] for single_env in domain_settings] 
-    goal_colors = [single_env[GOAL] for single_env in domain_settings] 
-    floor_colors = [single_env[FLOOR] for single_env in domain_settings] 
+    #wall_colors = [single_env[WALL] for single_env in domain_settings] 
+    #goal_colors = [single_env[GOAL] for single_env in domain_settings] 
+    #floor_colors = [single_env[FLOOR] for single_env in domain_settings] 
 
-    # check to make sure all colors are the same for now
-    consistent = _all_equal(wall_colors) and _all_equal(goal_colors) and _all_equal(floor_colors)
-    if not consistent:
-        raise RuntimeError(f"Some color configs are whack: {domain_settings}")
+    ## check to make sure all colors are the same for now
+    #consistent = _all_equal(wall_colors) and _all_equal(goal_colors) and _all_equal(floor_colors)
+    #if not consistent:
+    #    import ipdb; ipdb.set_trace()
+    #    raise RuntimeError(f"Some color configs are whack: {domain_settings}")
 
-    wall_color = wall_colors[0]
-    goal_color = goal_colors[0]
-    floor_color = floor_colors[0]
+    #wall_color = wall_colors[0]
+    #goal_color = goal_colors[0]
+    #floor_color = floor_colors[0]
 
-    color_str = f"{wall_color},{goal_color},{floor_color}"
+    # color_str = f"{wall_color},{goal_color},{floor_color}"
+    
+    color_str = ""
+    for single_env in domain_settings:
+        color_str += f"{single_env[WALL]},{single_env[GOAL]},{single_env[FLOOR]}\n"
+    color_str += " , , "
 
     # collect mode is 'collecting trajectories', i.e. training. If False -> eval mode
     mode = "eval"
