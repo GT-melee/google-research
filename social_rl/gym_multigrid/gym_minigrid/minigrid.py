@@ -108,7 +108,7 @@ class WorldObj:
 
     def encode(self):
         """Encode the a description of this object as a 3-tuple of integers"""
-        return (COLOR_TO_IDX[self.color], COLOR_TO_IDX[self.color], 0)
+        return (COLOR_TO_IDX[self.color]+1, COLOR_TO_IDX[self.color]+1, 0)  #+1 ensures no 0
 
     @staticmethod
     def decode(type_idx, color_idx, state):
@@ -554,8 +554,8 @@ class Grid:
                     v = self.get(i, j)
 
                     if v is None:
-                        array[i, j, 0] = COLOR_TO_IDX[self.floor_color]
-                        array[i, j, 1] = COLOR_TO_IDX[self.floor_color]
+                        array[i, j, 0] = COLOR_TO_IDX[self.floor_color]+1
+                        array[i, j, 1] = COLOR_TO_IDX[self.floor_color]+1   #ensures no 0
                         array[i, j, 2] = 0
 
                     else:
