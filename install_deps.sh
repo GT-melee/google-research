@@ -22,4 +22,7 @@ source ./venv/bin/activate
 pip install tf-nightly==2.5.0.dev20210326
 pip install tb-nightly==2.5.0a20210405
 
+git clone https://github.com/openai/gym.git ../gym
+pip install -e ../gym
+
 pip3 install -r social_rl/requirements.txt
