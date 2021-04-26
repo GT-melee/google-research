@@ -83,6 +83,10 @@ flags.DEFINE_boolean(
 flags.DEFINE_boolean(
     "domain_shifts", False, "If True, allows the adversary to also modify the environment colours."
 )
+# @busycalibrating - added random shifts as a cmd line arg
+flags.DEFINE_boolean(
+    "random_shifts", False, "If True, env colors are randomly selected every run",
+)
 flags.DEFINE_float("percent_random_episodes", 0.0, "The % of episodes trained with domain randomization.")
 flags.DEFINE_boolean(
     "no_adversary_rnn", False, "If True, will not use an RNN to parameterize the " "adversary environment"
@@ -148,6 +152,7 @@ def train_eval(
     adv_timestep_fc=10,
     adv_entropy_regularization=0.0,
     adv_domain_shift:bool = False,   # @busycalibrating - added domain shifts as cmd line arg
+    rand_domain_shift: bool = False,  # @busycalibrating
     # Params for collect
     num_train_steps=500000,
     collect_episodes_per_iteration=30,
@@ -187,7 +192,7 @@ def train_eval(
 
     logging.info("\n\n" + "-" * 80 + f"\n\t\t\tDOMAIN SHIFT: {adv_domain_shift}\n" + "-" * 80 + "\n")
 
-    gym_kwargs = {"domain_shifts": adv_domain_shift}
+    gym_kwargs = {"domain_shifts": adv_domain_shift, "random_shifts": rand_domain_shift}
     gym_env = adversarial_env.load(env_name, gym_kwargs=gym_kwargs)
 
     # Set up logging
@@ -571,7 +576,9 @@ def main(_):
         antagonist_population_size=FLAGS.antagonist_population_size,
         combined_population=FLAGS.combined_population,
         block_budget_weight=FLAGS.block_budget_weight,
+        # domain shifts
         adv_domain_shift=FLAGS.domain_shifts,
+        rand_domain_shift=FLAGS.random_shifts,
         num_train_steps=FLAGS.num_train_steps,
         collect_episodes_per_iteration=FLAGS.collect_episodes_per_iteration,
         num_parallel_envs=FLAGS.num_parallel_envs,

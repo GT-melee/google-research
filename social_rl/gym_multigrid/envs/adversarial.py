@@ -76,6 +76,7 @@ class AdversarialEnv(multigrid.MultiGridEnv):
         random_z_dim=50,
         choose_goal_last=False,
         domain_shifts: bool = False,
+        random_shifts: bool = False,
     ):
         """Initializes environment in which adversary places goal, agent, obstacles.
         Args:
@@ -113,8 +114,20 @@ class AdversarialEnv(multigrid.MultiGridEnv):
         #   - 'social_rl/adversarial_env/adversarial_env.py'
         #   - 'social_rl/adversarial_env/adversarial_parallel_env.py'
         # for logging purposes
-        logging.info(f"Initializing env with domain shifts: {domain_shifts}")
+
+        if domain_shifts and random_shifts:
+            raise TypeError("Cannot specify both random domain shifts and adversarial environments")
+        
+        self.random_shifts = random_shifts
         self.doing_shifts = domain_shifts
+        
+        shifts = "None"
+        if domain_shifts:
+            shifts = "Adversarial env"
+        elif random_shifts:
+            shifts = "Random color shifts"
+
+        logging.info(f"Initializing env with domain shifts: {shifts}")
 
         super().__init__(
             n_agents=1,
@@ -210,15 +223,36 @@ class AdversarialEnv(multigrid.MultiGridEnv):
         # 'fixed_environment' is True.
         self._gen_grid(self.width, self.height)
 
+        # No shift; generate default box
         if not self.doing_shifts:
             self.goal_color = "green"
             self.wall_color = "grey"
             self.grid.floor_color = "black"
             self.floor_color = "black"
+            self.grid.wall_rect(0, 0, self.width, self.height, self.gen_wall)
+
+        # random shift; select random colours
+        elif self.random_shifts:
+            numbers = set()
+
+            while (len(numbers) < 3):
+                numbers.add(random.randint(0, len(COLORS)-1))
+
+            numbers = list(numbers)
+            self.goal_color = COLOR_NAMES[numbers[0]]
+            self.wall_color = COLOR_NAMES[numbers[1]]
+            self.grid.floor_color = COLOR_NAMES[numbers[2]]
+            self.floor_color = COLOR_NAMES[numbers[2]]
+            
+            Grid.tile_cache = {}
+            self.grid.wall_rect(0, 0, self.width, self.height, self.gen_wall)
+
+        # expecting adversarial agent to select colours
         else:
             self.goal_color = None
             self.wall_color = None
             self.floor_color = None
+            Grid.tile_cache = {}
 
         image = self.grid.encode(False)  # TODO you can change False to True if the env does not use a domain shift
         obs = {"image": image, "time_step": [self.adversary_step_count], "random_z": self.generate_random_z()}
@@ -344,8 +378,10 @@ class AdversarialEnv(multigrid.MultiGridEnv):
             if self.adversary_step_count == 0:
                 self.wall_color = color_str
                 self.grid.wall_rect(0, 0, self.width, self.height, self.gen_wall)
+
             elif self.adversary_step_count == 1:
                 self.goal_color = color_str
+
             elif self.adversary_step_count == 2:
                 self.floor_color = color_str
                 self.grid.floor_color = self.floor_color
