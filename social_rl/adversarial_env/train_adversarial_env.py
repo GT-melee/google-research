@@ -190,7 +190,16 @@ def train_eval(
     if root_dir is None:
         raise AttributeError("train_eval requires a root_dir.")
 
-    logging.info("\n\n" + "-" * 80 + f"\n\t\t\tDOMAIN SHIFT: {adv_domain_shift}\n" + "-" * 80 + "\n")
+    if adv_domain_shift and rand_domain_shift:
+        raise TypeError("Cannot specify both random domain shifts and adversarial environments")
+    
+    shifts = "None"
+    if adv_domain_shift:
+        shifts = "Adversarial env"
+    elif rand_domain_shift:
+        shifts = "Random color shifts"
+
+    logging.info("\n\n" + "-" * 80 + f"\n\t\t\tDOMAIN SHIFT: {shifts}\n" + "-" * 80 + "\n")
 
     gym_kwargs = {"domain_shifts": adv_domain_shift, "random_shifts": rand_domain_shift}
     gym_env = adversarial_env.load(env_name, gym_kwargs=gym_kwargs)
