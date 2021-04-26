@@ -92,6 +92,7 @@ class BaseEnv:
         tf_env.reset()
         if self.video_fp is not None:
             py_env = VideoRecorder(py_env, self.video_fp)
+            py_env.capture_frame()
 
         self.py_env, self.tf_env = py_env, tf_env
         return py_env, tf_env
