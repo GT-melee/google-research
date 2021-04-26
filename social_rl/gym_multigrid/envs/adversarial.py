@@ -337,15 +337,15 @@ class AdversarialEnv(multigrid.MultiGridEnv):
 
         if self.doing_shifts and self.adversary_step_count < 3:  # this toggles if there's a domain shift or not
 
-            color_str = list(COLORS.keys())[loc % len(COLORS)]
+            # FIXME: This is technically broken
+            color_str = list(COLORS.keys())[loc % len(COLORS)]  # TODO!!!!!!!!!!!!!!
+            # FIXME: THISSSS
+
             counter = 1
             while color_str in self.used_colors:
                 color_str = list(COLORS.keys())[(loc + counter) % len(COLORS)]
                 counter += 1
             self.used_colors.add(color_str)
-
-            print("Setting env stuff: ", loc, color_str)
-            # TODO: This is technically broken
 
             # TODO to do a static shift, we can just
             if self.adversary_step_count == 0:
