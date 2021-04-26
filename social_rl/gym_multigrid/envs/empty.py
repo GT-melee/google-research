@@ -62,16 +62,17 @@ class EmptyEnv(multigrid.MultiGridEnv):
 
     def _gen_grid(self, width, height):
         # Create an empty grid
-        self.grid = multigrid.Grid(width, height)
+        self.grid = multigrid.Grid(width, height, floor_color=self.floor_color)
 
         # Generate the surrounding walls
-        self.grid.wall_rect(0, 0, width, height)
+        wall = lambda: minigrid.Wall(self.wall_color)
+        self.grid.wall_rect(0, 0, width, height, obj_type=wall)
 
         if self.randomize_goal:
-            self.place_obj(minigrid.Goal(), max_tries=100)
+            self.place_obj(minigrid.Goal(self.goal_color), max_tries=100)
         else:
             # Place a goal square in the bottom-right corner
-            self.put_obj(minigrid.Goal(), width - 2, height - 2)
+            self.put_obj(minigrid.Goal(self.goal_color), width - 2, height - 2)
 
         # Place the agents
         self.place_agent()
@@ -158,7 +159,13 @@ class EmptyRandomEnv6x6Minigrid(EmptyEnv):
 class EmptyRandomEnv15x15Minigrid(EmptyEnv):
     def __init__(self, **kwargs):
         super().__init__(
-            n_agents=1, size=15, agent_view_size=5, agent_start="random", randomize_goal=True, minigrid_mode=True
+            n_agents=1,
+            size=15,
+            agent_view_size=5,
+            agent_start="random",
+            randomize_goal=True,
+            minigrid_mode=True,
+            **kwargs
         )
 
 
@@ -181,6 +188,10 @@ register(env_id="MultiGrid-Empty-Random-16x16-v0", entry_point=module_path + ":E
 
 register(env_id="MultiGrid-Empty-5x5-Single-v0", entry_point=module_path + ":EmptyEnv5x5Single")
 
-register(env_id="MultiGrid-Empty-Random-6x6-Minigrid-v0", entry_point=module_path + ":EmptyRandomEnv6x6Minigrid")
+register(
+    env_id="MultiGrid-Empty-Random-6x6-Minigrid-v0", entry_point=module_path + ":EmptyRandomEnv6x6Minigrid",
+)
 
-register(env_id="MultiGrid-Empty-Random-15x15-Minigrid-v0", entry_point=module_path + ":EmptyRandomEnv15x15Minigrid")
+register(
+    env_id="MultiGrid-Empty-Random-15x15-Minigrid-v0", entry_point=module_path + ":EmptyRandomEnv15x15Minigrid",
+)
