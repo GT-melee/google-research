@@ -274,6 +274,7 @@ class Experiment:
             policies[name].append(self.load_checkpoint_from_path(path))
     return policies
 
+  # TODO: DAVID
   def load_environment(self, env_name):
     if 'Adversarial' in env_name:
       py_env = adversarial_env.load(env_name)
@@ -438,6 +439,7 @@ class Experiment:
     diffs = np.abs(np.array(dr_ckpts) - equiv_ckpt)
     return dr_ckpts[np.argmin(diffs)]
 
+  # TODO: David 
   def run_trials_in_env(self, env_name, df=None, num_trials=100,
                         video_record_episodes=3, test_type='val', metric=None,
                         dr_ckpts=None):
@@ -634,6 +636,7 @@ def prioritize_experiments(experiments, videos_dir):
   return experiments
 
 
+# TODO: David
 def test_experiment_in_environments(exp, envs, df, transfer_df_path,
                                     unsuccessful_trials, test_type='val',
                                     num_trials=25, debug=True, metric=None,
@@ -824,6 +827,7 @@ def generate_results(root_dir, experiments, test_on_test=False, test_mini=False,
   if reverse_order:
     experiments = experiments[::-1]
   """
+  # TODO: DAVID
   for i, exp in enumerate(experiments):  #
     for ckpt in checkpoints_to_check[exp.exp_id]:
       # Assign checkpoint to checkpoint nums before loading
