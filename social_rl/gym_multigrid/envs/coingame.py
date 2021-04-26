@@ -78,7 +78,7 @@ class CoinGameEnv(multigrid.MultiGridEnv):
             )
 
         self.observation_space = gym.spaces.Dict(
-            {"image": self.image_obs_space, "direction": self.direction_obs_space, "position": self.position_obs_space}
+            {"image": self.image_obs_space, "direction": self.direction_obs_space, "position": self.position_obs_space,}
         )
         self.metrics = {"self_pickups": 0, "friend_pickups": 0, "wrong_pickups": 0}
 
@@ -156,6 +156,8 @@ elif hasattr(__loader__, "fullname"):
 
 register(env_id="MultiGrid-CoinGame-v0", entry_point=module_path + ":CoinGameEnv")
 
-register(env_id="MultiGrid-CoinGame-Empty-6x6-Minigrid-v0", entry_point=module_path + ":EmptyCoinGameEnv10x10Minigrid")
+register(
+    env_id="MultiGrid-CoinGame-Empty-6x6-Minigrid-v0", entry_point=module_path + ":EmptyCoinGameEnv10x10Minigrid",
+)
 
 register(env_id="MultiGrid-CoinGame-Empty-10x10-v0", entry_point=module_path + ":EmptyCoinGameEnv10x10")

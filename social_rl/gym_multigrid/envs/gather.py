@@ -152,17 +152,27 @@ register(env_id="MultiGrid-Gather-Random-8x8-v0", entry_point=module_path + ":Ra
 
 register(env_id="MultiGrid-Gather-Random-10x10-v0", entry_point=module_path + ":RandomGatherEnv10x10")
 
-register(env_id="MultiGrid-Color-Gather-Empty-6x6-v0", entry_point=module_path + ":EmptyColorGatherEnv6x6")
+register(
+    env_id="MultiGrid-Color-Gather-Empty-6x6-v0", entry_point=module_path + ":EmptyColorGatherEnv6x6",
+)
 
-register(env_id="MultiGrid-Color-Gather-Random-8x8-v0", entry_point=module_path + ":RandomColorGatherEnv8x8")
+register(
+    env_id="MultiGrid-Color-Gather-Random-8x8-v0", entry_point=module_path + ":RandomColorGatherEnv8x8",
+)
 
-register(env_id="MultiGrid-Color-Gather-Empty-10x10-v0", entry_point=module_path + ":EmptyColorGatherEnv10x10")
+register(
+    env_id="MultiGrid-Color-Gather-Empty-10x10-v0", entry_point=module_path + ":EmptyColorGatherEnv10x10",
+)
 
-register(env_id="MultiGrid-Color-Gather-Empty-12x12-v0", entry_point=module_path + ":EmptyColorGatherEnv12x12")
+register(
+    env_id="MultiGrid-Color-Gather-Empty-12x12-v0", entry_point=module_path + ":EmptyColorGatherEnv12x12",
+)
 
 register(
     env_id="MultiGrid-Color-Gather-RandomCountsColorGatherEnv12x12-12x12-v0",
     entry_point=module_path + ":RerandomColorGatherEnv12x12",
 )
 
-register(env_id="MultiGrid-Color-Gather-Empty-15x15-v0", entry_point=module_path + ":EmptyColorGatherEnv15x15")
+register(
+    env_id="MultiGrid-Color-Gather-Empty-15x15-v0", entry_point=module_path + ":EmptyColorGatherEnv15x15",
+)

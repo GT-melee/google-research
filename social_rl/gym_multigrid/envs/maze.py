@@ -378,7 +378,9 @@ register(env_id="MultiGrid-Labyrinth2-v0", entry_point=module_path + ":Labyrinth
 
 register(env_id="MultiGrid-SixteenRooms-v0", entry_point=module_path + ":SixteenRoomsEnv")
 
-register(env_id="MultiGrid-SixteenRoomsFewerDoors-v0", entry_point=module_path + ":SixteenRoomsFewerDoorsEnv")
+register(
+    env_id="MultiGrid-SixteenRoomsFewerDoors-v0", entry_point=module_path + ":SixteenRoomsFewerDoorsEnv",
+)
 
 register(env_id="MultiGrid-NineRooms-v0", entry_point=module_path + ":NineRoomsEnv")
 

@@ -72,7 +72,7 @@ class FourRoomsEnv(multigrid.MultiGridEnv):
         self.grid = multigrid.Grid(width, height, self.floor_color)
 
         # Charlie whyyyyyy why is the obj_type a callable rather than an object :P
-        wall = lambda : minigrid.Wall(self.wall_color)
+        wall = lambda: minigrid.Wall(self.wall_color)
 
         # Generate the surrounding walls
         self.grid.horz_wall(0, 0, obj_type=wall)
@@ -175,6 +175,10 @@ register(env_id="MultiGrid-TwoRooms-Minigrid-v0", entry_point=module_path + ":Tw
 
 register(env_id="MultiGrid-FourRooms-Minigrid-v0", entry_point=module_path + ":FourRoomsEnvMinigrid")
 
-register(env_id="MultiGrid-MiniTwoRooms-Minigrid-v0", entry_point=module_path + ":MiniTwoRoomsEnvMinigrid")
+register(
+    env_id="MultiGrid-MiniTwoRooms-Minigrid-v0", entry_point=module_path + ":MiniTwoRoomsEnvMinigrid",
+)
 
-register(env_id="MultiGrid-MiniFourRooms-Minigrid-v0", entry_point=module_path + ":MiniFourRoomsEnvMinigrid")
+register(
+    env_id="MultiGrid-MiniFourRooms-Minigrid-v0", entry_point=module_path + ":MiniFourRoomsEnvMinigrid",
+)

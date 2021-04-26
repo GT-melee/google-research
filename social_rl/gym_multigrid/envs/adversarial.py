@@ -221,7 +221,11 @@ class AdversarialEnv(multigrid.MultiGridEnv):
             self.floor_color = None
 
         image = self.grid.encode(False)  # TODO you can change False to True if the env does not use a domain shift
-        obs = {"image": image, "time_step": [self.adversary_step_count], "random_z": self.generate_random_z()}
+        obs = {
+            "image": image,
+            "time_step": [self.adversary_step_count],
+            "random_z": self.generate_random_z(),
+        }
 
         return obs
 
@@ -406,7 +410,11 @@ class AdversarialEnv(multigrid.MultiGridEnv):
             self.compute_shortest_path()
 
         image = self.grid.encode(False)  # TODO change this if env was not shifted
-        obs = {"image": image, "time_step": [self.adversary_step_count], "random_z": self.generate_random_z()}
+        obs = {
+            "image": image,
+            "time_step": [self.adversary_step_count],
+            "random_z": self.generate_random_z(),
+        }
 
         return obs, 0, done, {}
 
@@ -622,13 +630,14 @@ elif hasattr(__loader__, "fullname"):
 register.register(env_id="MultiGrid-Adversarial-v0", entry_point=module_path + ":AdversarialEnv")
 
 register.register(
-    env_id="MultiGrid-ReparameterizedAdversarial-v0", entry_point=module_path + ":ReparameterizedAdversarialEnv"
+    env_id="MultiGrid-ReparameterizedAdversarial-v0", entry_point=module_path + ":ReparameterizedAdversarialEnv",
 )
 
 register.register(env_id="MultiGrid-MiniAdversarial-v0", entry_point=module_path + ":MiniAdversarialEnv")
 
 register.register(
-    env_id="MultiGrid-MiniReparameterizedAdversarial-v0", entry_point=module_path + ":MiniReparameterizedAdversarialEnv"
+    env_id="MultiGrid-MiniReparameterizedAdversarial-v0",
+    entry_point=module_path + ":MiniReparameterizedAdversarialEnv",
 )
 
 register.register(env_id="MultiGrid-NoisyAdversarial-v0", entry_point=module_path + ":NoisyAdversarialEnv")
@@ -638,5 +647,5 @@ register.register(env_id="MultiGrid-MediumAdversarial-v0", entry_point=module_pa
 register.register(env_id="MultiGrid-GoalLastAdversarial-v0", entry_point=module_path + ":GoalLastAdversarialEnv")
 
 register.register(
-    env_id="MultiGrid-MiniGoalLastAdversarial-v0", entry_point=module_path + ":MiniGoalLastAdversarialEnv"
+    env_id="MultiGrid-MiniGoalLastAdversarial-v0", entry_point=module_path + ":MiniGoalLastAdversarialEnv",
 )

@@ -45,7 +45,7 @@ class ClutteredMultiGrid(multigrid.MultiGridEnv):
 
     def _gen_grid(self, width, height):
         self.grid = multigrid.Grid(width, height, floor_color=self.floor_color)
-        wall = lambda : minigrid.Wall(color=self.wall_color)
+        wall = lambda: minigrid.Wall(color=self.wall_color)
 
         self.grid.wall_rect(0, 0, width, height, obj_type=wall)
 
@@ -149,7 +149,9 @@ register(env_id="MultiGrid-Cluttered-v0", entry_point=module_path + ":ClutteredM
 
 register(env_id="MultiGrid-Cluttered-Single-v0", entry_point=module_path + ":ClutteredMultiGridSingle")
 
-register(env_id="MultiGrid-Cluttered-Single-6x6-v0", entry_point=module_path + ":ClutteredMultiGridSingle6x6")
+register(
+    env_id="MultiGrid-Cluttered-Single-6x6-v0", entry_point=module_path + ":ClutteredMultiGridSingle6x6",
+)
 
 register(env_id="MultiGrid-Cluttered40-Minigrid-v0", entry_point=module_path + ":Cluttered40Minigrid")
 
@@ -159,16 +161,30 @@ register(env_id="MultiGrid-Cluttered50-Minigrid-v0", entry_point=module_path + "
 
 register(env_id="MultiGrid-Cluttered5-Minigrid-v0", entry_point=module_path + ":Cluttered5Minigrid")
 
-register(env_id="MultiGrid-MiniCluttered1-Minigrid-v0", entry_point=module_path + ":Cluttered1MinigridMini")
+register(
+    env_id="MultiGrid-MiniCluttered1-Minigrid-v0", entry_point=module_path + ":Cluttered1MinigridMini",
+)
 
-register(env_id="MultiGrid-MiniCluttered6-Minigrid-v0", entry_point=module_path + ":Cluttered6MinigridMini")
+register(
+    env_id="MultiGrid-MiniCluttered6-Minigrid-v0", entry_point=module_path + ":Cluttered6MinigridMini",
+)
 
-register(env_id="MultiGrid-MiniCluttered7-Minigrid-v0", entry_point=module_path + ":Cluttered7MinigridMini")
+register(
+    env_id="MultiGrid-MiniCluttered7-Minigrid-v0", entry_point=module_path + ":Cluttered7MinigridMini",
+)
 
-register(env_id="MultiGrid-Cluttered-Lava-Minigrid-v0", entry_point=module_path + ":ClutteredMinigridLava")
+register(
+    env_id="MultiGrid-Cluttered-Lava-Minigrid-v0", entry_point=module_path + ":ClutteredMinigridLava",
+)
 
-register(env_id="MultiGrid-MiniCluttered-Lava-Minigrid-v0", entry_point=module_path + ":ClutteredMinigridLavaMini")
+register(
+    env_id="MultiGrid-MiniCluttered-Lava-Minigrid-v0", entry_point=module_path + ":ClutteredMinigridLavaMini",
+)
 
-register(env_id="MultiGrid-MediumCluttered-Lava-Minigrid-v0", entry_point=module_path + ":ClutteredMinigridLavaMedium")
+register(
+    env_id="MultiGrid-MediumCluttered-Lava-Minigrid-v0", entry_point=module_path + ":ClutteredMinigridLavaMedium",
+)
 
-register(env_id="MultiGrid-MediumCluttered15-Minigrid-v0", entry_point=module_path + ":Cluttered15MinigridMedium")
+register(
+    env_id="MultiGrid-MediumCluttered15-Minigrid-v0", entry_point=module_path + ":Cluttered15MinigridMedium",
+)

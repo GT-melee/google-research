@@ -163,13 +163,17 @@ register(
     entry_point=module_path + ":SingleTargetMeetupEnv6x6Minigrid",
 )
 
-register(env_id="MultiGrid-Meetup-Empty-6x6-Minigrid-v0", entry_point=module_path + ":EmptyMeetupEnv6x6Minigrid")
+register(
+    env_id="MultiGrid-Meetup-Empty-6x6-Minigrid-v0", entry_point=module_path + ":EmptyMeetupEnv6x6Minigrid",
+)
 
 register(env_id="MultiGrid-Meetup-Single-6x6-v0", entry_point=module_path + ":SingleMeetupEnv6x6")
 
 register(env_id="MultiGrid-Meetup-Random-8x8-v0", entry_point=module_path + ":RandomMeetupEnv8x8")
 
-register(env_id="MultiGrid-Meetup-Random-8x8-Minigrid-v0", entry_point=module_path + ":RandomMeetupEnv8x8Minigrid")
+register(
+    env_id="MultiGrid-Meetup-Random-8x8-Minigrid-v0", entry_point=module_path + ":RandomMeetupEnv8x8Minigrid",
+)
 
 register(env_id="MultiGrid-Meetup-Single-8x8-v0", entry_point=module_path + ":SingleMeetupEnv8x8")
 
