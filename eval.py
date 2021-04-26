@@ -29,6 +29,38 @@ tf.compat.v1.enable_v2_behavior()
 logging.basicConfig(level=logging.INFO)
 
 
+VAL_ENVS = [
+    'MultiGrid-TwoRooms-Minigrid-v0',
+    'MultiGrid-Cluttered40-Minigrid-v0',
+    'MultiGrid-Cluttered10-Minigrid-v0',
+    'MultiGrid-SixteenRooms-v0',
+    'MultiGrid-Maze2-v0',
+    'MultiGrid-Maze3-v0',
+    'MultiGrid-Labyrinth2-v0',
+]
+TEST_ENVS = [
+    'MultiGrid-FourRooms-Minigrid-v0',
+    'MultiGrid-Cluttered50-Minigrid-v0',
+    'MultiGrid-Cluttered5-Minigrid-v0',
+    'MultiGrid-Empty-Random-15x15-Minigrid-v0',
+    'MultiGrid-SixteenRoomsFewerDoors-v0',
+    'MultiGrid-Maze-v0',
+    'MultiGrid-Labyrinth-v0',
+]
+MINI_VAL_ENVS = [
+    'MultiGrid-MiniTwoRooms-Minigrid-v0',
+    'MultiGrid-Empty-Random-6x6-Minigrid-v0',
+    'MultiGrid-MiniCluttered6-Minigrid-v0',
+    'MultiGrid-MiniCluttered-Lava-Minigrid-v0',
+    'MultiGrid-MiniMaze-v0'
+]
+MINI_TEST_ENVS = [
+    'MultiGrid-MiniFourRooms-Minigrid-v0',
+    'MultiGrid-MiniCluttered7-Minigrid-v0',
+    'MultiGrid-MiniCluttered1-Minigrid-v0'
+]
+
+
 # Define the Environment loaders for base and adversarial environments
 class BaseEnv:
     def __init__(self, name: str, video_fp: str = None, gym_kwargs=None):
