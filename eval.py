@@ -28,7 +28,7 @@ from social_rl.multiagent_tfagents import multiagent_gym_suite
 try:
     from social_rl.gym_multigrid.gym_minigrid.minigrid import COLORS, IDX_TO_COLOR, COLOR_TO_IDX
 except ImportError as e:
-    print(
+    logging.warning(
         """Not able to import any color info - you are likely running in the original rep.
 This will work, but just ensure that all color options are set to None (in the BaseEnv and AdvEnv)."""
     )
