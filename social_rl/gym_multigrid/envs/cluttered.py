@@ -44,17 +44,23 @@ class ClutteredMultiGrid(multigrid.MultiGridEnv):
         )
 
     def _gen_grid(self, width, height):
-        self.grid = multigrid.Grid(width, height)
-        self.grid.wall_rect(0, 0, width, height)
+        self.grid = multigrid.Grid(width, height, floor_color=self.floor_color)
+        wall = lambda : minigrid.Wall(color=self.wall_color)
+
+        self.grid.wall_rect(0, 0, width, height, obj_type=wall)
+
         if self.randomize_goal:
-            self.place_obj(minigrid.Goal(), max_tries=100)
+            self.place_obj(minigrid.Goal(self.goal_color), max_tries=100)
+
         else:
-            self.put_obj(minigrid.Goal(), width - 2, height - 2)
+            self.put_obj(minigrid.Goal(self.goal_color), width - 2, height - 2)
+
         for _ in range(self.n_clutter):
+
             if self.walls_are_lava:
                 self.place_obj(minigrid.Lava(), max_tries=100)
             else:
-                self.place_obj(minigrid.Wall(), max_tries=100)
+                self.place_obj(minigrid.Wall(self.wall_color), max_tries=100)
 
         self.place_agent()
 
