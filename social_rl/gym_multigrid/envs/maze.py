@@ -88,13 +88,16 @@ class MazeEnv(multigrid.MultiGridEnv):
 
     def _gen_grid(self, width, height):
         # Create an empty grid
-        self.grid = multigrid.Grid(width, height)
+        self.grid = multigrid.Grid(width, height, self.floor_color)
+
+        # thx charlie u da best  <3
+        wall = lambda: minigrid.Wall(color=self.wall_color)
 
         # Generate the surrounding walls
-        self.grid.wall_rect(0, 0, width, height)
+        self.grid.wall_rect(0, 0, width, height, obj_type=wall)
 
         # Goal
-        self.put_obj(minigrid.Goal(), self.goal_pos[0], self.goal_pos[1])
+        self.put_obj(minigrid.Goal(self.goal_color), self.goal_pos[0], self.goal_pos[1])
 
         # Agent
         self.place_agent_at_pos(0, self.start_pos)
@@ -104,7 +107,7 @@ class MazeEnv(multigrid.MultiGridEnv):
             for y in range(self.bit_map.shape[1]):
                 if self.bit_map[y, x]:
                     # Add an offset of 1 for the outer walls
-                    self.put_obj(minigrid.Wall(), x + 1, y + 1)
+                    self.put_obj(wall(), x + 1, y + 1)
 
 
 class HorizontalMazeEnv(MazeEnv):
