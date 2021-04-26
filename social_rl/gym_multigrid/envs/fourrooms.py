@@ -69,13 +69,16 @@ class FourRoomsEnv(multigrid.MultiGridEnv):
 
     def _gen_grid(self, width, height):
         # Create the grid
-        self.grid = multigrid.Grid(width, height)
+        self.grid = multigrid.Grid(width, height, self.floor_color)
+
+        # Charlie whyyyyyy why is the obj_type a callable rather than an object :P
+        wall = lambda : minigrid.Wall(self.wall_color)
 
         # Generate the surrounding walls
-        self.grid.horz_wall(0, 0)
-        self.grid.horz_wall(0, height - 1)
-        self.grid.vert_wall(0, 0)
-        self.grid.vert_wall(width - 1, 0)
+        self.grid.horz_wall(0, 0, obj_type=wall)
+        self.grid.horz_wall(0, height - 1, obj_type=wall)
+        self.grid.vert_wall(0, 0, obj_type=wall)
+        self.grid.vert_wall(width - 1, 0, obj_type=wall)
 
         room_w = width // 2
         room_h = height // 2
@@ -91,7 +94,7 @@ class FourRoomsEnv(multigrid.MultiGridEnv):
 
                 # Vertical wall and door
                 if i + 1 < 2:
-                    self.grid.vert_wall(x_right, y_top, room_h)
+                    self.grid.vert_wall(x_right, y_top, room_h, obj_type=wall)
                     if not (j == 1 and self.two_rooms and height < 7):
                         pos = (x_right, self._rand_int(y_top + 1, y_bottom))
                         if not (pos[0] <= 1 or pos[0] >= width - 1 or pos[1] <= 0 or pos[1] >= height - 1):
@@ -100,7 +103,7 @@ class FourRoomsEnv(multigrid.MultiGridEnv):
                 # Horizontal wall and door
                 if not self.two_rooms:
                     if j + 1 < 2:
-                        self.grid.horz_wall(x_left, y_bottom, room_w)
+                        self.grid.horz_wall(x_left, y_bottom, room_w, obj_type=wall)
                         pos = (self._rand_int(x_left + 1, x_right), y_bottom)
                         if not (pos[0] <= 1 or pos[0] >= width - 1 or pos[1] <= 0 or pos[1] >= height - 1):
                             self.grid.set(*pos, None)
@@ -114,11 +117,11 @@ class FourRoomsEnv(multigrid.MultiGridEnv):
             self.place_agent()
 
         if self._goal_default_pos is not None:
-            goal = minigrid.Goal()
+            goal = minigrid.Goal(self.goal_color)
             self.put_obj(goal, *self._goal_default_pos)
             goal.init_pos, goal.cur_pos = self._goal_default_pos
         else:
-            self.place_obj(minigrid.Goal())
+            self.place_obj(minigrid.Goal(self.goal_color))
 
         self.mission = "Reach the goal"
 

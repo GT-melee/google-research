@@ -264,7 +264,7 @@ class Grid(minigrid.Grid):
 
     def rotate_left(self):
         """Rotate the grid counter-clockwise, including agents within it."""
-        grid = Grid(self.height, self.width)
+        grid = Grid(self.height, self.width, self.floor_color)
 
         for i in range(self.width):
             for j in range(self.height):
@@ -285,7 +285,7 @@ class Grid(minigrid.Grid):
     def slice(self, top_x, top_y, width, height, agent_pos=None):
         """Get a subset of the grid for agents' partial observations."""
 
-        grid = Grid(width, height)
+        grid = Grid(width, height, self.floor_color)
 
         for j in range(0, height):
             for i in range(0, width):
@@ -295,6 +295,7 @@ class Grid(minigrid.Grid):
                 if x >= 0 and x < self.width and y >= 0 and y < self.height:
                     v = self.get(x, y)
                 else:
+                    # raise RuntimeError("Bad David")
                     v = minigrid.Wall()
 
                 grid.set(i, j, v)
@@ -322,8 +323,8 @@ class MultiGridEnv(minigrid.MiniGridEnv):
         # colors
         goal_color="green",
         wall_color="grey",
-        # grid.floor_color = "black"
         floor_color="black",
+        # grid.floor_color = "black"
     ):
         """Constructor for multi-agent gridworld environment generator.
     Args:
@@ -350,9 +351,9 @@ class MultiGridEnv(minigrid.MiniGridEnv):
         full environment state, rather than a partially observed, ego-centric
         observation.
     """
-        self.goal_color = None
-        self.wall_color = None
-        self.floor_color = None
+        self.goal_color = goal_color
+        self.wall_color = wall_color
+        self.floor_color = floor_color
 
         self.fully_observed = fully_observed
 

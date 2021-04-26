@@ -150,7 +150,7 @@ class WorldObj:
         raise NotImplementedError
 
 class Goal(WorldObj):
-    def __init__(self, color="green"):
+    def __init__(self, color="green"):  # TODO:
         super().__init__('goal', color)
 
     def can_overlap(self):
@@ -205,7 +205,7 @@ class Lava(WorldObj):
             fill_coords(img, point_in_line(0.7, yhi, 0.9, ylo, r=0.03), (0,0,0))
 
 class Wall(WorldObj):
-    def __init__(self, color='grey'):
+    def __init__(self, color='grey'):  # TODO: 
         super().__init__('wall', color)
 
     def see_behind(self):
@@ -442,7 +442,7 @@ class Grid:
     def render_tile(
         cls,
         obj,
-            floor_color,
+        floor_color,
         agent_dir=None,
         highlight=False,
         tile_size=TILE_PIXELS,
