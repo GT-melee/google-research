@@ -109,7 +109,7 @@ class AdversarialEnv(multigrid.MultiGridEnv):
         # Add two actions for placing the agent and goal.
         self.adversary_max_steps = self.n_clutter + 2
 
-        # WARNING: 'self.doing_shifts' is now used in 
+        # WARNING: 'self.doing_shifts' is now used in
         #   - 'social_rl/adversarial_env/adversarial_env.py'
         #   - 'social_rl/adversarial_env/adversarial_parallel_env.py'
         # for logging purposes
@@ -152,7 +152,7 @@ class AdversarialEnv(multigrid.MultiGridEnv):
         # NetworkX graph used for computing shortest path
         self.graph = grid_graph(dim=[size - 2, size - 2])
         self.wall_locs = []
-    
+
     # TODO: @busycalibrating - hacky workaround to access this value from the underlying gym object
     def domain_shifts(self):
         return self.doing_shifts
@@ -307,7 +307,7 @@ class AdversarialEnv(multigrid.MultiGridEnv):
 
     def gen_wall(self):
         return minigrid.Wall(self.wall_color)
-    
+
     def domain_settings(self):
         settings = {WALL: self.wall_color, GOAL: self.goal_color, FLOOR: self.floor_color}
         return settings
