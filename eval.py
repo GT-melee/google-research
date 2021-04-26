@@ -24,6 +24,7 @@ from tf_agents.typing.types import PyEnv
 from social_rl import gym_multigrid
 from social_rl.adversarial_env import adversarial_env
 from social_rl.multiagent_tfagents import multiagent_gym_suite
+from social_rl.gym_multigrid.gym_minigrid.minigrid import COLORS, IDX_TO_COLOR, COLOR_TO_IDX
 
 tf.compat.v1.enable_v2_behavior()
 logging.basicConfig(level=logging.INFO)
@@ -63,16 +64,29 @@ MINI_TEST_ENVS = [
 
 # Define the Environment loaders for base and adversarial environments
 class BaseEnv:
-    def __init__(self, name: str, video_fp: str = None, gym_kwargs=None):
+    def __init__(self, name: str, colors: str = None, video_fp: str = None, gym_kwargs=None):
         self.name = name
         self.video_fp = video_fp
+
+        if gym_kwargs is None:
+            gym_kwargs = {}
         self.gym_kwargs = gym_kwargs
+        self.colors = colors
 
         self.py_env = None
         self.tf_env = None
 
     def make_env(self):
-        py_env = multiagent_gym_suite.load(self.name, gym_kwargs=self.gym_kwargs)
+
+        kwargs = self.gym_kwargs.copy()
+        if self.colors is not None:
+            kwargs.update({
+                "wall_color": IDX_TO_COLOR[self.colors[0]] ,
+                "goal_color": IDX_TO_COLOR[self.colors[1]] ,
+                "floor_color": IDX_TO_COLOR[self.colors[2]] ,
+            })
+
+        py_env = multiagent_gym_suite.load(self.name, gym_kwargs=kwargs)
         tf_env = tf_py_environment.TFPyEnvironment(py_env)
         py_env.reset()
         tf_env.reset()
@@ -94,18 +108,18 @@ class AdvEnv(BaseEnv):
             sequence: list of locs where to place the agent, goal, and then walls
             colors (optional): specifies the (wall, goal, floor) color
         """
-        if colors is None:
-            # default color scheme
-            # colors = [5, 1, 6]
-            pass
+        # if colors is None:
+        #     # default color scheme
+        #     # colors = [5, 1, 6]
+        #     pass
         
-        self.colors = colors
+        # self.colors = colors
 
         gym_kwargs = {}
-        if self.colors is not None:
+        if colors is not None:
             gym_kwargs["domain_shifts"] = True
 
-        super().__init__(name='MultiGrid-Adversarial-v0', video_fp=video_fp, gym_kwargs=gym_kwargs)
+        super().__init__(name='MultiGrid-Adversarial-v0', colors=colors, video_fp=video_fp, gym_kwargs=gym_kwargs)
         
         self.py_env = None
         self.tf_env = None

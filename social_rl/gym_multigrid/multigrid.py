@@ -36,7 +36,7 @@ import numpy as np
 
 # Map of color names to RGB values
 from social_rl.gym_multigrid.gym_minigrid import minigrid, rendering
-from social_rl.gym_multigrid.gym_minigrid.minigrid import COLORS
+from social_rl.gym_multigrid.gym_minigrid.minigrid import COLORS, COLOR_TO_IDX
 
 AGENT_COLOURS = [
     np.array([60, 182, 234]),  # Blue
@@ -159,8 +159,22 @@ class Grid(minigrid.Grid):
             key = (tuple(highlight), tile_size)
         else:
             key = (highlight, tile_size)
-        key = obj.encode() + key if obj else key
 
+        if obj:
+            key = obj.encode() + key
+
+            if hasattr(obj, 'color'):
+                key = key + (COLOR_TO_IDX[obj.color],)
+            
+            if obj.type == "agent":
+                key = key + (COLOR_TO_IDX[floor_color],)
+
+        else:  # no object = floor
+            key = key + (COLOR_TO_IDX[floor_color],)
+
+        # TODO: @busycalibrating will probably slow shit down but redrawing with different colors is
+        # fucking impossible with this reeeeeee 
+        # need to check if its the correct color tho
         if key in cls.tile_cache:
             return cls.tile_cache[key]
 
