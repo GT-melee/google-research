@@ -223,13 +223,12 @@ class AdversarialEnv(multigrid.MultiGridEnv):
         # 'fixed_environment' is True.
         self._gen_grid(self.width, self.height)
 
-        # No shift; generate default box
-        if not self.doing_shifts:
-            self.goal_color = "green"
-            self.wall_color = "grey"
-            self.grid.floor_color = "black"
-            self.floor_color = "black"
-            self.grid.wall_rect(0, 0, self.width, self.height, self.gen_wall)
+        # expecting adversarial agent to select colours
+        if self.doing_shifts:
+            self.goal_color = None
+            self.wall_color = None
+            self.floor_color = None
+            Grid.tile_cache = {}
 
         # random shift; select random colours
         elif self.random_shifts:
@@ -247,12 +246,14 @@ class AdversarialEnv(multigrid.MultiGridEnv):
             Grid.tile_cache = {}
             self.grid.wall_rect(0, 0, self.width, self.height, self.gen_wall)
 
-        # expecting adversarial agent to select colours
+        # No shift; generate default box
         else:
-            self.goal_color = None
-            self.wall_color = None
-            self.floor_color = None
-            Grid.tile_cache = {}
+            self.goal_color = "green"
+            self.wall_color = "grey"
+            self.grid.floor_color = "black"
+            self.floor_color = "black"
+            self.grid.wall_rect(0, 0, self.width, self.height, self.gen_wall)
+
 
         image = self.grid.encode(False)  # TODO you can change False to True if the env does not use a domain shift
         obs = {"image": image, "time_step": [self.adversary_step_count], "random_z": self.generate_random_z()}
