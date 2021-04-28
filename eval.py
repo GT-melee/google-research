@@ -507,7 +507,7 @@ class EvalAgent:
 
 import multiprocessing.pool
 def do_inner_loop(name, weights, env_name, example_colors):
-    agent = EvalAgent(name, weights, num_eval_ep=100, max_steps_per_ep=250)
+    agent = EvalAgent(name, weights, num_eval_ep=500, max_steps_per_ep=250)
 
     color_env = BaseEnv(env_name, colors=example_colors, video_fp=None)  # f"videos/{name}_COLOR.mp4")
 
@@ -515,7 +515,7 @@ def do_inner_loop(name, weights, env_name, example_colors):
     return agent.accumulated_metrics
 
 
-def run_for_one_weight(weight, envs):
+def run_for_one_weight(pool, weight, envs):
     RUN_NAME = weight
 
     inputs = []
@@ -531,8 +531,7 @@ def run_for_one_weight(weight, envs):
         example_colors = [example_colors] * len(envs)
         inputs.extend([(n, w, e, c) for n, w, e, c in zip(run_names, weights, envs, example_colors)])
 
-    with multiprocessing.pool.Pool(6) as pool:
-        output = pool.starmap(do_inner_loop, inputs)
+    output = pool.starmap(do_inner_loop, inputs)
 
     mergy_mc_mergeface = output[0]
     for agent in output[1:]:
@@ -554,7 +553,14 @@ def run_for_one_weight(weight, envs):
         f.write(out_str)
 
 def main():
-    run_for_one_weight("./for_janklord_dynamic_shift_2021_04_22/policy_saved_model/agent/0/policy_000573300", MINI_TEST_ENVS+MINI_VAL_ENVS)
+    pool = multiprocessing.pool.Pool(6)
+    for weight in [
+        "./for_janklord_dynamic_shift_2021_04_22/policy_saved_model/agent/0/policy_000573300",
+        "/home/charlie/SDRIVE/datasets/static_apr22/policy_saved_model/agent/0/policy_000499950",
+        "/home/charlie/SDRIVE/datasets/randomization_during_training_apr22/policy_saved_model/agent/0/policy_000396600",
+        "./baseline/agents/policy_000438000"
+    ]:
+        run_for_one_weight(pool, weight, MINI_TEST_ENVS+MINI_VAL_ENVS)
     exit()
     example_colors = [10, 11, 12]  # (purple green gray) -> (wall, goal, floor)
     # example_colors = [COLOR_TO_IDX[i] for i in colors]
