@@ -507,35 +507,55 @@ class EvalAgent:
 
 import multiprocessing.pool
 def do_inner_loop(name, weights, env_name, example_colors):
-    agent = EvalAgent(name, weights, num_eval_ep=1, max_steps_per_ep=250)
+    agent = EvalAgent(name, weights, num_eval_ep=100, max_steps_per_ep=250)
 
-    env = BaseEnv(env_name, video_fp=None)  # f"videos/{name}.mp4")
     color_env = BaseEnv(env_name, colors=example_colors, video_fp=None)  # f"videos/{name}_COLOR.mp4")
 
-    agent.eval_env(env)
     agent.eval_env(color_env)
     return agent.accumulated_metrics
 
 
 def run_for_one_weight(weight, envs):
-    all_envs = MINI_TEST_ENVS + MINI_VAL_ENVS  # VAL_ENVS + TEST_ENVS + MINI_VAL_ENVS + MINI_TEST_ENVS
-    RUN_NAME = "DYNAMIC_SHIFTED"
+    RUN_NAME = weight
+
+    inputs = []
+    for example_colors in [
+        None,       # static
+        (4, 3, 0),  # static
+        (2,3,4),    # collapse
+        (1,6,7),    # new seen colors
+        (12,13,14)  # new unseen colors
+    ]:
+        run_names = [RUN_NAME] * len(envs)
+        weights = [weight] * len(envs)
+        example_colors = [example_colors] * len(envs)
+        inputs.extend([(n, w, e, c) for n, w, e, c in zip(run_names, weights, envs, example_colors)])
 
     with multiprocessing.pool.Pool(6) as pool:
-        run_names = [RUN_NAME] * len(all_envs)
-        weights = [weight] * len(all_envs)
-        envs = all_envs
-        example_colors = [example_colors] * len(all_envs)
-        input = [(n, w, e, c) for n, w, e, c in zip(run_names, weights, envs, example_colors)]
+        output = pool.starmap(do_inner_loop, inputs)
 
-        output = pool.starmap(do_inner_loop, input)
     mergy_mc_mergeface = output[0]
     for agent in output[1:]:
         mergy_mc_mergeface.extend(agent)
-    agent = EvalAgent("STATIC_GOODENC", new_enc, num_eval_ep=100, max_steps_per_ep=250)
+    agent = EvalAgent(weight.replace('/', '-'), weight, num_eval_ep=1, max_steps_per_ep=250)
     agent.accumulated_metrics = mergy_mc_mergeface
 
+    for metrics in agent.accumulated_metrics:
+        print(metrics)
+        print(metrics.get_stats())
+        metrics.summarize()
+
+    dico = agent.summary()
+    out_str = ""
+    for key, item in dico.items():
+        out_str += f"{key.upper()}: {item['all']}\n"
+    print(out_str)
+    with open(f"./videos/eval_results_{weight.replace('/', '-')}.txt", "w") as f:
+        f.write(out_str)
+
 def main():
+    run_for_one_weight("./for_janklord_dynamic_shift_2021_04_22/policy_saved_model/agent/0/policy_000573300", MINI_TEST_ENVS+MINI_VAL_ENVS)
+    exit()
     example_colors = [10, 11, 12]  # (purple green gray) -> (wall, goal, floor)
     # example_colors = [COLOR_TO_IDX[i] for i in colors]
     # Example sequence-based adversarial env
@@ -585,9 +605,12 @@ def main():
         metrics.summarize()
 
     dico = agent.summary()
+    out_str = ""
     for key, item in dico.items():
-        print(key.upper()+":", item["all"])
-    concat = agent.accumulated_metrics
+        out_str += f"{key.upper()}: {item['all']}\n"
+    print(out_str)
+    with open("./videos/eval_results.txt", "w") as f:
+        f.write(out_str)
 
     exit(0)
 
