@@ -314,27 +314,41 @@ class Metrics:
 
     def __len__(self):
         return len(self.data)
-    
+
     def __getitem__(self, i):
         return self.data[i]
 
     def __repr__(self):
         return f"{self.agent_name}-{self.env_name}-{self.colors} at {hex(id(self))}"
-    
+
     def get_stats(self):
-        _data = [{"num_actions": len(i['actions']), "reward": i['reward']} for i in self.data]
+        _data = [{"num_actions": len(i["actions"]), "reward": i["reward"]} for i in self.data]
         return pd.DataFrame(_data)
 
     def rewards(self):
-        return [i['reward'] for i in self.data]
+        return [i["reward"] for i in self.data]
+
+    def get_cum_reward(self):
+        df = self.get_stats()
+        cum = df["reward"].sum()
+        return cum
 
     def get_solve_percentage(self):
         num_ep = len(self)
         solved = 0
         for i in self.data:
-            if i['reward'] > 0.0:
+            if i["reward"] > 0.0:
                 solved += 1
         return float(solved) / float(num_ep)
+
+    def summarize(self):
+        """Final stats are [% solved, cum_reward]"""
+        output = {
+            "percent_solved": self.get_solve_percentage(),
+            "cum_reward": self.get_cum_reward(),
+        }
+
+        return output
 
 
 class EvalAgent:
@@ -351,6 +365,14 @@ class EvalAgent:
         max_steps_per_ep: int = 200,
         prepend_video_with_name: bool = True,
     ):
+        """
+        Args:
+            name: A user specified name for the agent which is (optionally) appended to output files (videos)
+            model_path: Location of the TF SavedModel 
+            num_eval_ep: Number of eval episodes to run over with this agent when calling `EvalAgent.eval_env(env)`
+            max_steps_per_ep: The number of steps to run an agent in an epsidoe before considering the trail 'failed'
+            prepend_video_with_name: Prepends the above specified name to output video files
+        """
         self.name = name
         self.model_path = model_path
         self.agent = load_agent(model_path)
@@ -362,6 +384,8 @@ class EvalAgent:
         self.accumulated_metrics = []
 
     def eval_env(self, env: BaseEnv):
+        """Processes an env
+        """
         # ensure no existing env is lingering
         env.close()
         metrics = Metrics(self.name, env.name, env.colors)
@@ -417,13 +441,69 @@ class EvalAgent:
         self.accumulated_metrics.append(metrics)
         return metrics
 
+    def summary(self, split_colors: bool = True):
+        def _aggregate_df(frames: list):
+            """frames is a list of dataframes to agg stats on"""
+            if len(frames) == 0:
+                return {"all": None, "indiv": None}
+
+            df = pd.DataFrame()
+            df = pd.concat(frames).reset_index(drop=True)
+
+            if len(df) == 0:
+                return {"all": None, "indiv": None}
+
+            # get cum reward
+            cum = df["reward"].sum()
+
+            # get % solved
+            num_ep = len(df)
+            num_solv = len(df[df["reward"] > 0.0])
+            percent_solved = float(num_solv) / float(num_ep)
+
+            agg = {
+                "percent_solved": percent_solved,
+                "cum_reward": cum,
+                "max_possible_reward": len(df),
+            }
+
+            # get individuals
+            individual = []
+            for metrics in self.accumulated_metrics:
+                df = metrics.get_stats()
+                key = f"{metrics.agent_name}-{metrics.env_name}-{metrics.colors}"
+                tmp = [key, metrics.summarize()]
+                individual.append(tmp)
+
+            return {"all": agg, "indiv": individual}
+
+        if split_colors:
+            static = [
+                metrics.get_stats()
+                for metrics in self.accumulated_metrics
+                if metrics.colors is None
+            ]
+            dynamic = [
+                metrics.get_stats()
+                for metrics in self.accumulated_metrics
+                if metrics.colors is not None
+            ]
+
+            static_output = _aggregate_df(static)
+            dynamic_output = _aggregate_df(dynamic)
+            return {"static_stats": static_output, "dynamic_stats": dynamic_output}
+
+        frames = [metrics.get_stats() for metrics in self.accumulated_metrics]
+        output = _aggregate_df(frames)
+        return output
+
 
 def main():
     example_colors = [3, 1, 5]  # (purple green gray) -> (wall, goal, floor)
 
     # Example sequence-based adversarial env
     charlie_static_bad_enc = "/home/ddobre/Projects/game_theory/saved_models/static_apr22/policy_saved_model/agent/0/policy_000499950/"
-    agent = EvalAgent("static_000499950", charlie_static_bad_enc, )
+    agent = EvalAgent("static_000499950", charlie_static_bad_enc,)
 
     # define environments
     sequence = [
