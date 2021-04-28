@@ -396,7 +396,7 @@ def main():
     example_colors = [3, 1, 5]  # (purple green gray) -> (wall, goal, floor)
 
     # Example sequence-based adversarial env
-    charlie_static_bad_enc = "/home/ddobre/Projects/game_theory/saved_models/static_apr22/policy_saved_model/agent/0/policy_000499950/"
+    charlie_static_bad_enc = "/home/adam/Documents/2021-winter/ift-6756/gt-org/any_shifts_apr_17/paired/policy_saved_model/agent/0/policy_000499950/"
     agent = EvalAgent("static_000499950", charlie_static_bad_enc)
 
     # define environments
@@ -445,5 +445,8 @@ def main():
     color_base_env = BaseEnv(name, colors=example_colors, video_fp=f"videos/{name}_COLOR.mp4")
 
     # evaluate on these envs and agents
-    agent.eval_env(base_env)
-    agent.eval_env(color_base_env)
+    print(agent.eval_env(base_env))
+    print(agent.eval_env(color_base_env))
+
+if __name__ == '__main__':
+    main()
