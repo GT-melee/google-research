@@ -391,7 +391,7 @@ class EvalAgent:
         metrics = Metrics(self.name, env.name, env.colors)
 
         # make filepaths a bit more informative
-        if self.prepend_name:
+        if self.prepend_name and env.video_fp is not None:
             video_fp = Path(env.video_fp)
             parent = video_fp.parent
             name = video_fp.name
@@ -426,76 +426,75 @@ class EvalAgent:
                 _, rew, disc, obs = timestep
                 rew = rew.numpy()[0]  # note that we only have one agent
                 if rew > 0.0:
-                    py_env.capture_frame()
-                    py_env.capture_frame()
-                    py_env.capture_frame()
                     break
 
             spl = -1
             if hasattr(tf_env, "get_shortest_path_length"):
                 spl = tf_env.get_shortest_path_length().numpy()[0]
-            # print(f"{ep}; itr: {i}; rew: {rew}")
             metrics.log_timesteps(actions, spl, rew)
 
         env.close()
         self.accumulated_metrics.append(metrics)
         return metrics
 
-    def summary(self, split_colors: bool = True):
-        def _aggregate_df(frames: list):
-            """frames is a list of dataframes to agg stats on"""
-            if len(frames) == 0:
-                return {"all": None, "indiv": None}
 
-            df = pd.DataFrame()
-            df = pd.concat(frames).reset_index(drop=True)
+def summary(accumulated_metrics, split_colors: bool = True):
+    def _aggregate_df(frames: list):
+        """frames is a list of dataframes to agg stats on"""
+        if len(frames) == 0:
+            return {"all": None, "indiv": None}
 
-            if len(df) == 0:
-                return {"all": None, "indiv": None}
+        df = pd.DataFrame()
+        df = pd.concat(frames).reset_index(drop=True)
 
-            # get cum reward
-            cum = df["reward"].sum()
+        if len(df) == 0:
+            return {"all": None, "indiv": None}
 
-            # get % solved
-            num_ep = len(df)
-            num_solv = len(df[df["reward"] > 0.0])
-            percent_solved = float(num_solv) / float(num_ep)
+        # get cum reward
+        cum = df["reward"].sum()
 
-            agg = {
-                "percent_solved": percent_solved,
-                "cum_reward": cum,
-                "max_possible_reward": len(df),
-            }
+        # get % solved
+        num_ep = len(df)
+        num_solv = len(df[df["reward"] > 0.0])
+        percent_solved = float(num_solv) / float(num_ep)
 
-            # get individuals
-            individual = []
-            for metrics in self.accumulated_metrics:
-                df = metrics.get_stats()
-                key = f"{metrics.agent_name}-{metrics.env_name}-{metrics.colors}"
-                tmp = [key, metrics.summarize()]
-                individual.append(tmp)
+        agg = {
+            "percent_solved": percent_solved,
+            "cum_reward": cum,
+            "max_possible_reward": len(df),
+        }
 
-            return {"all": agg, "indiv": individual}
+        # get individuals
+        individual = []
+        for metrics in accumulated_metrics:
+            df = metrics.get_stats()
+            key = f"{metrics.agent_name}-{metrics.env_name}-{metrics.colors}"
+            tmp = [key, metrics.summarize()]
+            individual.append(tmp)
 
-        if split_colors:
-            static = [
-                metrics.get_stats()
-                for metrics in self.accumulated_metrics
-                if metrics.colors is None
-            ]
-            dynamic = [
-                metrics.get_stats()
-                for metrics in self.accumulated_metrics
-                if metrics.colors is not None
-            ]
+        return {"all": agg, "indiv": individual}
 
-            static_output = _aggregate_df(static)
-            dynamic_output = _aggregate_df(dynamic)
-            return {"static_stats": static_output, "dynamic_stats": dynamic_output}
+    if split_colors:
+        static = [metrics.get_stats() for metrics in accumulated_metrics if metrics.colors is None]
+        all_colors = [metrics.colors for metrics in accumulated_metrics if metrics.colors is not None]
 
-        frames = [metrics.get_stats() for metrics in self.accumulated_metrics]
-        output = _aggregate_df(frames)
-        return output
+        all_shifts = []
+        for color in all_colors:
+            color_shift = []
+            for metrics in accumulated_metrics:
+                if metrics.colors == color:
+                    color_shift.append(metrics.get_stats())
+            all_shifts.append(color_shift)
+
+        ret_dict = {"static_stats": _aggregate_df(static)}
+        for i, shift in enumerate(all_shifts):
+            ret_dict[str(tuple(all_colors[i]))] = _aggregate_df(shift)
+
+        return ret_dict
+
+    frames = [metrics.get_stats() for metrics in accumulated_metrics]
+    output = _aggregate_df(frames)
+    return output
 
 
 def main():
