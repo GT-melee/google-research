@@ -11,6 +11,7 @@ import matplotlib.pyplot as plt
 
 # tensorflow
 import tensorflow as tf
+import tqdm as tqdm
 from tf_agents.environments import tf_py_environment
 from tf_agents.policies import policy_loader
 from tf_agents.trajectories import time_step as ts_lib
@@ -331,6 +332,11 @@ class Metrics:
     def rewards(self):
         return [i['reward'] for i in self.data]
 
+    def get_cum_reward(self):
+        df = self.get_stats()
+        cum = df['reward'].sum()
+        return cum
+
     def get_solve_percentage(self):
         num_ep = len(self)
         solved = 0
@@ -338,6 +344,15 @@ class Metrics:
             if i['reward'] > 0.0:
                 solved += 1
         return float(solved) / float(num_ep)
+
+    def summarize(self):
+        """Final stats are [% solved, cum_reward]"""
+        output = {
+            'percent_solved': self.get_solve_percentage(),
+            'cum_reward': self.get_cum_reward(),
+        }
+
+        return output
 
 
 class EvalAgent:
@@ -364,20 +379,76 @@ class EvalAgent:
 
         self.accumulated_metrics = []
 
+    def summary(self, split_colors: bool = True):
+        def _aggregate_df(frames: list):
+            """frames is a list of dataframes to agg stats on"""
+            if len(frames) == 0:
+                return {"all": None, "indiv": None}
+
+            df = pd.DataFrame()
+            df = pd.concat(frames).reset_index(drop=True)
+
+            if len(df) == 0:
+                return {"all": None, "indiv": None}
+
+            # get cum reward
+            cum = df["reward"].sum()
+
+            # get % solved
+            num_ep = len(df)
+            num_solv = len(df[df["reward"] > 0.0])
+            percent_solved = float(num_solv) / float(num_ep)
+
+            agg = {
+                "percent_solved": percent_solved,
+                "cum_reward": cum,
+                "max_possible_reward": len(df),
+            }
+
+            # get individuals
+            individual = []
+            for metrics in self.accumulated_metrics:
+                df = metrics.get_stats()
+                key = f"{metrics.agent_name}-{metrics.env_name}-{metrics.colors}"
+                tmp = [key, metrics.summarize()]
+                individual.append(tmp)
+
+            return {"all": agg, "indiv": individual}
+
+        if split_colors:
+            static = [
+                metrics.get_stats()
+                for metrics in self.accumulated_metrics
+                if metrics.colors is None
+            ]
+            dynamic = [
+                metrics.get_stats()
+                for metrics in self.accumulated_metrics
+                if metrics.colors is not None
+            ]
+
+            static_output = _aggregate_df(static)
+            dynamic_output = _aggregate_df(dynamic)
+            return {"static_stats": static_output, "dynamic_stats": dynamic_output}
+
+        frames = [metrics.get_stats() for metrics in self.accumulated_metrics]
+        output = _aggregate_df(frames)
+        return output
+
     def eval_env(self, env: BaseEnv):
         # ensure no existing env is lingering
         env.close()
         metrics = Metrics(self.name, env.name, env.colors)
 
         # make filepaths a bit more informative
-        if self.prepend_name:
+        if env.video_fp is not None and self.prepend_name:
             video_fp = Path(env.video_fp)
             parent = video_fp.parent
             name = video_fp.name
             env.set_video_fp(str(parent / f"{self.name}_{name}"))
 
         # loop over n eval episodes for this configuration
-        for ep in range(self.num_eval_ep):
+        for ep in tqdm.trange(self.num_eval_ep):
             # Creates the environment
             py_env, tf_env = env.reset()
 
@@ -398,8 +469,6 @@ class EvalAgent:
                 #img = img[None, :, :, :]
                 timestep.observation["image"] = tf.convert_to_tensor(img)"""
 
-
-
                 # main loop
                 policy_step = self.agent.action(timestep, policy_state=policy_state)
                 policy_state = policy_step.state
@@ -417,27 +486,7 @@ class EvalAgent:
                 _, rew, disc, obs = timestep
                 rew = rew.numpy()[0]  # note that we only have one agent
                 if rew > 0.0:
-                    agent_pos = tf_env.pyenv.envs[0].gym.agent_pos[0]
-                    def _goal_post():
-                        def iter():
-                            for i, tile in enumerate(tf_env.pyenv.envs[0].gym.grid.grid):
-                                if tile is not None and tile.type == "goal":
-                                    return tile.cur_pos
-                            return None
-                        return iter()
-                    AHHHH = tf_env.pyenv.render()[0]
-                    plt.imshow(AHHHH)
-                    plt.show()
-
-                    goal_pos = _goal_post()
-                    if goal_pos is None:
-                        raise Exception(":)")
-
-
-
-
-
-                    print("FCUKY WUCKY")
+                  #  print("FCUKY WUCKY")
                     break
 
             spl = -1
@@ -449,90 +498,75 @@ class EvalAgent:
         self.accumulated_metrics.append(metrics)
         return metrics
 
+import multiprocessing.pool
+def do_inner_loop(name, weights, env_name, example_colors):
+    agent = EvalAgent(name, weights, num_eval_ep=100, max_steps_per_ep=250)
+
+    env = BaseEnv(env_name, video_fp=None)  # f"videos/{name}.mp4")
+    color_env = BaseEnv(env_name, colors=example_colors, video_fp=None)  # f"videos/{name}_COLOR.mp4")
+
+    agent.eval_env(env)
+    agent.eval_env(color_env)
+    return agent.accumulated_metrics
+
 
 def main():
-    example_colors = [1, 3, 7]  # (purple green gray) -> (wall, goal, floor)
+    example_colors = [1, 2, 7]  # (purple green gray) -> (wall, goal, floor)
     # example_colors = [COLOR_TO_IDX[i] for i in colors]
     # Example sequence-based adversarial env
     # charlie_static_bad_enc = "/home/ddobre/Projects/game_theory/saved_models/static_apr22/policy_saved_model/agent/0/policy_000499950/"
     # baseline_fp = "/home/ddobre/Projects/game_theory/saved_models/baseline/agents/policy_000420000/"
     # bpy_fp = "/home/ddobre/Pros/blue_purple_yellow_0499950/"
-    #new_enc = "/home/charlie/SDRIVE/datasets/static_apr22/policy_saved_model/agent/0/policy_000499950"#"./baseline/agents/policy_000438000"
-    new_enc = "./for_janklord_dynamic_shift_2021_04_22/policy_saved_model/agent/0/policy_000573300"  # "./baseline/agents/policy_000438000"
+    #"/home/charlie/SDRIVE/datasets/randomization_during_training_apr22/policy_saved_model/agent/0/policy_000396600"
+    new_enc = "/home/charlie/SDRIVE/datasets/static_apr22/policy_saved_model/agent/0/policy_000499950"#"./baseline/agents/policy_000438000"
+    #new_enc = "./for_janklord_dynamic_shift_2021_04_22/policy_saved_model/agent/0/policy_000573300"  # "./baseline/agents/policy_000438000"
+    doing_mp = True
+    all_envs = MINI_TEST_ENVS+MINI_VAL_ENVS #VAL_ENVS + TEST_ENVS + MINI_VAL_ENVS + MINI_TEST_ENVS
+    RUN_NAME = "DYNAMIC_SHIFTED"
 
-    agent = EvalAgent("STATIC_GOODENC", new_enc, num_eval_ep=10, max_steps_per_ep=250)
+    if doing_mp:
+        with multiprocessing.pool.Pool(6) as pool:
+            run_names = [RUN_NAME]*len(all_envs)
+            weights = [new_enc]*len(all_envs)
+            envs = all_envs
+            example_colors = [example_colors]*len(all_envs)
+            input = [(n, w, e, c) for n, w, e, c in zip(run_names, weights, envs, example_colors)]
 
-    # modify this
-    for name in ["MultiGrid-MiniCluttered6-Minigrid-v0"]:#MINI_TEST_ENVS+MINI_VAL_ENVS:#VAL_ENVS + TEST_ENVS + MINI_VAL_ENVS + MINI_TEST_ENVS:
-        env = BaseEnv(name, video_fp=f"videos/{name}.mp4")
-        color_env = BaseEnv(name, colors=example_colors, video_fp=f"videos/{name}_COLOR.mp4")
+            output = pool.starmap(do_inner_loop, input)
+        mergy_mc_mergeface = output[0]
+        for agent in output[1:]:
+            mergy_mc_mergeface.extend(agent)
+        agent = EvalAgent("STATIC_GOODENC", new_enc, num_eval_ep=100, max_steps_per_ep=250)
+        agent.accumulated_metrics = mergy_mc_mergeface
 
-        agent.eval_env(env)
-        agent.eval_env(color_env)
+    else:
+        agent = EvalAgent("STATIC_GOODENC", new_enc, num_eval_ep=100, max_steps_per_ep=250)
+
+        # modify this
+        for name in all_envs:
+
+
+
+            env = BaseEnv(name, video_fp=None)#f"videos/{name}.mp4")
+            color_env = BaseEnv(name, colors=example_colors, video_fp=None)#f"videos/{name}_COLOR.mp4")
+
+            agent.eval_env(env)
+            agent.eval_env(color_env)
 
     idx = 0
     for metrics in agent.accumulated_metrics:
         print(metrics)
         print(metrics.get_stats())
+        metrics.summarize()
 
-    concat = metrics
+    dico = agent.summary()
+    print("STATIC:", dico["static_stats"]["all"])
+    print("DYNAMIC:", dico["dynamic_stats"]["all"])
+    print()
+
+    concat = agent.accumulated_metrics
 
     exit(0)
-    example_colors = [3, 1, 5]  # (purple green gray) -> (wall, goal, floor)
-
-    # Example sequence-based adversarial env
-    charlie_static_bad_enc = "./baseline/agents/policy_000438000"#"/home/charlie/SDRIVE/datasets/static_apr22/policy_saved_model/agent/0/policy_000499950"
-    agent = EvalAgent("static_000499950", charlie_static_bad_enc)
-
-    # define environments
-    sequence = [
-        71,
-        111,
-        42,
-        43,
-        44,
-        45,
-        46,
-        47,
-        48,
-        55,
-        61,
-        68,
-        74,
-        81,
-        84,
-        85,
-        87,
-        94,
-        100,
-        107,
-        113,
-        120,
-        121,
-        122,
-        123,
-        124,
-        125,
-        126,
-    ]
-    sequence = [0,1,2]
-    seq_env = AdvEnv(sequence=sequence, video_fp="videos/seq_room.mp4")
-    domain_shift_env = AdvEnv(
-        sequence=sequence, colors=example_colors, video_fp="videos/color_seq_room.mp4"
-    )
-
-    # evaluate on these envs and agents
-    agent.eval_env(seq_env)
-    agent.eval_env(domain_shift_env)
-
-    # example on baseline envs
-    name = MINI_TEST_ENVS[0]
-    base_env = BaseEnv(name, video_fp=f"videos/{name}.mp4")
-    color_base_env = BaseEnv(name, colors=example_colors, video_fp=f"videos/{name}_COLOR.mp4")
-
-    # evaluate on these envs and agents
-    agent.eval_env(base_env)
-    agent.eval_env(color_base_env)
 
 if __name__ == '__main__':
     main()
