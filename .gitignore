@@ -24,3 +24,4 @@ venv
 .ipynb_checkpoints/
 *.ipynb
 
+social_rl/gym

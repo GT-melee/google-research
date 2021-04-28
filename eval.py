@@ -25,6 +25,9 @@ from social_rl import gym_multigrid
 from social_rl.adversarial_env import adversarial_env
 from social_rl.multiagent_tfagents import multiagent_gym_suite
 
+import os
+os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
+
 try:
     from social_rl.gym_multigrid.gym_minigrid.minigrid import COLORS, IDX_TO_COLOR, COLOR_TO_IDX
 except ImportError as e:
@@ -302,8 +305,6 @@ class AdvEnv(BaseEnv):
 
 
 class Metrics:
-    """so useless"""
-
     def __init__(self, agent_name: str, env_name: str, colors):
         self.agent_name = agent_name
         self.env_name = env_name
@@ -313,6 +314,30 @@ class Metrics:
     def log_timesteps(self, actions, spl, reward):
         # any other metrics??
         self.data.append({"actions": actions, "spl": spl, "reward": reward})
+
+    def __len__(self):
+        return len(self.data)
+
+    def __getitem__(self, i):
+        return self.data[i]
+
+    def __repr__(self):
+        return f"{self.agent_name}-{self.env_name}-{self.colors} at {hex(id(self))}"
+
+    def get_stats(self):
+        _data = [{"num_actions": len(i['actions']), "reward": i['reward']} for i in self.data]
+        return pd.DataFrame(_data)
+
+    def rewards(self):
+        return [i['reward'] for i in self.data]
+
+    def get_solve_percentage(self):
+        num_ep = len(self)
+        solved = 0
+        for i in self.data:
+            if i['reward'] > 0.0:
+                solved += 1
+        return float(solved) / float(num_ep)
 
 
 class EvalAgent:
@@ -363,6 +388,18 @@ class EvalAgent:
             actions = []
 
             for i in range(self.max_steps_per_ep):
+                """
+                obs = timestep.observation
+                img = np.zeros(obs["image"].shape, dtype=np.uint8)
+                x = np.array(obs["image"])
+                img[np.all(x == [0,0,0], axis=-1)] = [1,0,0]
+                img[np.all(x == [4, 4, 0], axis=-1)] = [2, 5, 0]
+                img[np.all(x == [3, 3, 0], axis=-1)] = [8, 1, 0]
+                #img = img[None, :, :, :]
+                timestep.observation["image"] = tf.convert_to_tensor(img)"""
+
+
+
                 # main loop
                 policy_step = self.agent.action(timestep, policy_state=policy_state)
                 policy_state = policy_step.state
@@ -380,6 +417,27 @@ class EvalAgent:
                 _, rew, disc, obs = timestep
                 rew = rew.numpy()[0]  # note that we only have one agent
                 if rew > 0.0:
+                    agent_pos = tf_env.pyenv.envs[0].gym.agent_pos[0]
+                    def _goal_post():
+                        def iter():
+                            for i, tile in enumerate(tf_env.pyenv.envs[0].gym.grid.grid):
+                                if tile is not None and tile.type == "goal":
+                                    return tile.cur_pos
+                            return None
+                        return iter()
+                    AHHHH = tf_env.pyenv.render()[0]
+                    plt.imshow(AHHHH)
+                    plt.show()
+
+                    goal_pos = _goal_post()
+                    if goal_pos is None:
+                        raise Exception(":)")
+
+
+
+
+
+                    print("FCUKY WUCKY")
                     break
 
             spl = -1
@@ -393,10 +451,37 @@ class EvalAgent:
 
 
 def main():
+    example_colors = [1, 3, 7]  # (purple green gray) -> (wall, goal, floor)
+    # example_colors = [COLOR_TO_IDX[i] for i in colors]
+    # Example sequence-based adversarial env
+    # charlie_static_bad_enc = "/home/ddobre/Projects/game_theory/saved_models/static_apr22/policy_saved_model/agent/0/policy_000499950/"
+    # baseline_fp = "/home/ddobre/Projects/game_theory/saved_models/baseline/agents/policy_000420000/"
+    # bpy_fp = "/home/ddobre/Pros/blue_purple_yellow_0499950/"
+    #new_enc = "/home/charlie/SDRIVE/datasets/static_apr22/policy_saved_model/agent/0/policy_000499950"#"./baseline/agents/policy_000438000"
+    new_enc = "./for_janklord_dynamic_shift_2021_04_22/policy_saved_model/agent/0/policy_000573300"  # "./baseline/agents/policy_000438000"
+
+    agent = EvalAgent("STATIC_GOODENC", new_enc, num_eval_ep=10, max_steps_per_ep=250)
+
+    # modify this
+    for name in ["MultiGrid-MiniCluttered6-Minigrid-v0"]:#MINI_TEST_ENVS+MINI_VAL_ENVS:#VAL_ENVS + TEST_ENVS + MINI_VAL_ENVS + MINI_TEST_ENVS:
+        env = BaseEnv(name, video_fp=f"videos/{name}.mp4")
+        color_env = BaseEnv(name, colors=example_colors, video_fp=f"videos/{name}_COLOR.mp4")
+
+        agent.eval_env(env)
+        agent.eval_env(color_env)
+
+    idx = 0
+    for metrics in agent.accumulated_metrics:
+        print(metrics)
+        print(metrics.get_stats())
+
+    concat = metrics
+
+    exit(0)
     example_colors = [3, 1, 5]  # (purple green gray) -> (wall, goal, floor)
 
     # Example sequence-based adversarial env
-    charlie_static_bad_enc = "/home/ddobre/Projects/game_theory/saved_models/static_apr22/policy_saved_model/agent/0/policy_000499950/"
+    charlie_static_bad_enc = "./baseline/agents/policy_000438000"#"/home/charlie/SDRIVE/datasets/static_apr22/policy_saved_model/agent/0/policy_000499950"
     agent = EvalAgent("static_000499950", charlie_static_bad_enc)
 
     # define environments
@@ -430,6 +515,7 @@ def main():
         125,
         126,
     ]
+    sequence = [0,1,2]
     seq_env = AdvEnv(sequence=sequence, video_fp="videos/seq_room.mp4")
     domain_shift_env = AdvEnv(
         sequence=sequence, colors=example_colors, video_fp="videos/color_seq_room.mp4"
@@ -447,3 +533,6 @@ def main():
     # evaluate on these envs and agents
     agent.eval_env(base_env)
     agent.eval_env(color_base_env)
+
+if __name__ == '__main__':
+    main()
