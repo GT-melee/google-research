@@ -421,15 +421,22 @@ class EvalAgent:
                 for metrics in self.accumulated_metrics
                 if metrics.colors is None
             ]
-            dynamic = [
-                metrics.get_stats()
-                for metrics in self.accumulated_metrics
-                if metrics.colors is not None
-            ]
 
-            static_output = _aggregate_df(static)
-            dynamic_output = _aggregate_df(dynamic)
-            return {"static_stats": static_output, "dynamic_stats": dynamic_output}
+            all_colors = [metrics.colors for metrics in self.accumulated_metrics if metrics.colors is not None]
+
+            all_shifts = []
+            for color in all_colors:
+                color_shift = []
+                for metrics in self.accumulated_metrics:
+                    if metrics.colors == color:
+                        color_shift.append(metrics.get_stats())
+                all_shifts.append(color_shift)
+
+            ret_dict = {"static_stats": _aggregate_df(static)}
+            for i, shift in enumerate(all_shifts):
+                ret_dict[str(tuple(all_colors[i]))] = _aggregate_df(shift)
+
+            return ret_dict
 
         frames = [metrics.get_stats() for metrics in self.accumulated_metrics]
         output = _aggregate_df(frames)
@@ -500,7 +507,7 @@ class EvalAgent:
 
 import multiprocessing.pool
 def do_inner_loop(name, weights, env_name, example_colors):
-    agent = EvalAgent(name, weights, num_eval_ep=100, max_steps_per_ep=250)
+    agent = EvalAgent(name, weights, num_eval_ep=1, max_steps_per_ep=250)
 
     env = BaseEnv(env_name, video_fp=None)  # f"videos/{name}.mp4")
     color_env = BaseEnv(env_name, colors=example_colors, video_fp=None)  # f"videos/{name}_COLOR.mp4")
@@ -510,16 +517,34 @@ def do_inner_loop(name, weights, env_name, example_colors):
     return agent.accumulated_metrics
 
 
+def run_for_one_weight(weight, envs):
+    all_envs = MINI_TEST_ENVS + MINI_VAL_ENVS  # VAL_ENVS + TEST_ENVS + MINI_VAL_ENVS + MINI_TEST_ENVS
+    RUN_NAME = "DYNAMIC_SHIFTED"
+
+    with multiprocessing.pool.Pool(6) as pool:
+        run_names = [RUN_NAME] * len(all_envs)
+        weights = [weight] * len(all_envs)
+        envs = all_envs
+        example_colors = [example_colors] * len(all_envs)
+        input = [(n, w, e, c) for n, w, e, c in zip(run_names, weights, envs, example_colors)]
+
+        output = pool.starmap(do_inner_loop, input)
+    mergy_mc_mergeface = output[0]
+    for agent in output[1:]:
+        mergy_mc_mergeface.extend(agent)
+    agent = EvalAgent("STATIC_GOODENC", new_enc, num_eval_ep=100, max_steps_per_ep=250)
+    agent.accumulated_metrics = mergy_mc_mergeface
+
 def main():
-    example_colors = [1, 2, 7]  # (purple green gray) -> (wall, goal, floor)
+    example_colors = [10, 11, 12]  # (purple green gray) -> (wall, goal, floor)
     # example_colors = [COLOR_TO_IDX[i] for i in colors]
     # Example sequence-based adversarial env
     # charlie_static_bad_enc = "/home/ddobre/Projects/game_theory/saved_models/static_apr22/policy_saved_model/agent/0/policy_000499950/"
     # baseline_fp = "/home/ddobre/Projects/game_theory/saved_models/baseline/agents/policy_000420000/"
     # bpy_fp = "/home/ddobre/Pros/blue_purple_yellow_0499950/"
     #"/home/charlie/SDRIVE/datasets/randomization_during_training_apr22/policy_saved_model/agent/0/policy_000396600"
-    new_enc = "/home/charlie/SDRIVE/datasets/static_apr22/policy_saved_model/agent/0/policy_000499950"#"./baseline/agents/policy_000438000"
-    #new_enc = "./for_janklord_dynamic_shift_2021_04_22/policy_saved_model/agent/0/policy_000573300"  # "./baseline/agents/policy_000438000"
+    #new_enc = "/home/charlie/SDRIVE/datasets/static_apr22/policy_saved_model/agent/0/policy_000499950"#"./baseline/agents/policy_000438000"
+    new_enc = "./for_janklord_dynamic_shift_2021_04_22/policy_saved_model/agent/0/policy_000573300"  # "./baseline/agents/policy_000438000"
     doing_mp = True
     all_envs = MINI_TEST_ENVS+MINI_VAL_ENVS #VAL_ENVS + TEST_ENVS + MINI_VAL_ENVS + MINI_TEST_ENVS
     RUN_NAME = "DYNAMIC_SHIFTED"
@@ -560,10 +585,8 @@ def main():
         metrics.summarize()
 
     dico = agent.summary()
-    print("STATIC:", dico["static_stats"]["all"])
-    print("DYNAMIC:", dico["dynamic_stats"]["all"])
-    print()
-
+    for key, item in dico.items():
+        print(key.upper()+":", item["all"])
     concat = agent.accumulated_metrics
 
     exit(0)
