@@ -29,7 +29,7 @@ try:
     from social_rl.gym_multigrid.gym_minigrid.minigrid import COLORS, IDX_TO_COLOR, COLOR_TO_IDX
 except ImportError as e:
     logging.warning(
-        """Not able to import any color info - you are likely running in the original rep.
+        """Not able to import any color info - you are likely running in the original repo.
 This will work, but just ensure that all color options are set to None (in the BaseEnv and AdvEnv)."""
     )
 
@@ -302,8 +302,6 @@ class AdvEnv(BaseEnv):
 
 
 class Metrics:
-    """so useless"""
-
     def __init__(self, agent_name: str, env_name: str, colors):
         self.agent_name = agent_name
         self.env_name = env_name
@@ -313,6 +311,30 @@ class Metrics:
     def log_timesteps(self, actions, spl, reward):
         # any other metrics??
         self.data.append({"actions": actions, "spl": spl, "reward": reward})
+
+    def __len__(self):
+        return len(self.data)
+    
+    def __getitem__(self, i):
+        return self.data[i]
+
+    def __repr__(self):
+        return f"{self.agent_name}-{self.env_name}-{self.colors} at {hex(id(self))}"
+    
+    def get_stats(self):
+        _data = [{"num_actions": len(i['actions']), "reward": i['reward']} for i in self.data]
+        return pd.DataFrame(_data)
+
+    def rewards(self):
+        return [i['reward'] for i in self.data]
+
+    def get_solve_percentage(self):
+        num_ep = len(self)
+        solved = 0
+        for i in self.data:
+            if i['reward'] > 0.0:
+                solved += 1
+        return float(solved) / float(num_ep)
 
 
 class EvalAgent:
@@ -351,11 +373,11 @@ class EvalAgent:
             name = video_fp.name
             env.set_video_fp(str(parent / f"{self.name}_{name}"))
 
+        # Creates the environment
+        py_env, tf_env = env.reset()
+
         # loop over n eval episodes for this configuration
         for ep in range(self.num_eval_ep):
-            # Creates the environment
-            py_env, tf_env = env.reset()
-
             # Reinit everything
             timestep = env.soft_reset()
             policy_state = self.agent.get_initial_state(1)
@@ -380,11 +402,15 @@ class EvalAgent:
                 _, rew, disc, obs = timestep
                 rew = rew.numpy()[0]  # note that we only have one agent
                 if rew > 0.0:
+                    py_env.capture_frame()
+                    py_env.capture_frame()
+                    py_env.capture_frame()
                     break
 
             spl = -1
             if hasattr(tf_env, "get_shortest_path_length"):
                 spl = tf_env.get_shortest_path_length().numpy()[0]
+            # print(f"{ep}; itr: {i}; rew: {rew}")
             metrics.log_timesteps(actions, spl, rew)
 
         env.close()
@@ -397,7 +423,7 @@ def main():
 
     # Example sequence-based adversarial env
     charlie_static_bad_enc = "/home/ddobre/Projects/game_theory/saved_models/static_apr22/policy_saved_model/agent/0/policy_000499950/"
-    agent = EvalAgent("static_000499950", charlie_static_bad_enc)
+    agent = EvalAgent("static_000499950", charlie_static_bad_enc, )
 
     # define environments
     sequence = [
