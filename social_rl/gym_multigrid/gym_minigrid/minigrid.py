@@ -25,6 +25,20 @@ COLORS = {
     "lamourestbrun": np.array([222,222,0])
 }
 
+ENCODINGS_HASH = {
+    0: 2, 
+    1: 8, 
+    2: 10, 
+    3: 6, 
+    4: 0, 
+    5: 3, 
+    6: 4, 
+    7: 5, 
+    8: 1, 
+    9: 7
+}
+
+
 COLOR_NAMES = sorted(list(COLORS.keys()))
 print(COLOR_NAMES)
 
@@ -108,7 +122,12 @@ class WorldObj:
 
     def encode(self):
         """Encode the a description of this object as a 3-tuple of integers"""
-        return (COLOR_TO_IDX[self.color]+1, COLOR_TO_IDX[self.color]+1, 0)  #+1 ensures no 0
+        # return (COLOR_TO_IDX[self.color]+1, COLOR_TO_IDX[self.color]+1, 0)  #+1 ensures no 0
+        return (
+            COLOR_TO_IDX[self.color], 
+            ENCODINGS_HASH[COLOR_TO_IDX[self.color]], 
+            0
+        )
 
     @staticmethod
     def decode(type_idx, color_idx, state):
@@ -250,7 +269,11 @@ class Door(WorldObj):
         elif not self.is_open:
             state = 1
 
-        return (COLOR_TO_IDX[self.color], COLOR_TO_IDX[self.color], state)
+        return (
+            COLOR_TO_IDX[self.color], 
+            ENCODINGS_HASH[COLOR_TO_IDX[self.color]], 
+            state
+        )
 
     def render(self, img):
         c = COLORS[self.color]
@@ -554,8 +577,11 @@ class Grid:
                     v = self.get(i, j)
 
                     if v is None:
-                        array[i, j, 0] = COLOR_TO_IDX[self.floor_color]+1
-                        array[i, j, 1] = COLOR_TO_IDX[self.floor_color]+1   #ensures no 0
+                        array[i, j, 0] = COLOR_TO_IDX[self.floor_color]
+                        array[i, j, 1] = ENCODINGS_HASH[COLOR_TO_IDX[self.floor_color]]
+                        # array[i, j, 0] = COLOR_TO_IDX[self.floor_color]+1
+                        # array[i, j, 1] = COLOR_TO_IDX[self.floor_color]+1   #ensures no 0
+ 
                         array[i, j, 2] = 0
 
                     else:
