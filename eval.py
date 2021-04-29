@@ -512,7 +512,7 @@ def summary(accumulated_metrics, split_colors: bool = True):
 
 import multiprocessing.pool
 def do_inner_loop(name, weights, env_name, example_colors):
-    agent = EvalAgent(name, weights, num_eval_ep=1000, max_steps_per_ep=250)
+    agent = EvalAgent(name, weights, num_eval_ep=100, max_steps_per_ep=250)
 
     color_env = BaseEnv(env_name, colors=example_colors, video_fp=None)  # f"videos/{name}_COLOR.mp4")
 
@@ -529,7 +529,7 @@ def run_for_one_weight(pool, weight, envs):
         (4, 3, 0),  # static
         (2,3,4),    # collapse
         (1,6,7),    # new seen colors
-        (12,13,14)  # new unseen colors
+        (10,11,12)  # new unseen colors
     ]:
         run_names = [RUN_NAME] * len(envs)
         weights = [weight] * len(envs)
@@ -558,6 +558,7 @@ def run_for_one_weight(pool, weight, envs):
         f.write(out_str)
 
 def main():
+    """
     pool = multiprocessing.pool.Pool(6)
     for weight in [
        "./for_janklord_dynamic_shift_2021_04_22/policy_saved_model/agent/0/policy_000573300",
@@ -565,8 +566,8 @@ def main():
         "/home/charlie/SDRIVE/datasets/randomization_during_training_apr22/policy_saved_model/agent/0/policy_000396600",
         "./baseline/agents/policy_000438000"
     ]:
-        run_for_one_weight(pool, weight, MINI_TEST_ENVS+MINI_VAL_ENVS)
-    exit()
+        run_for_one_weight(pool, weight, VAL_ENVS+TEST_ENVS)#MINI_TEST_ENVS+MINI_VAL_ENVS)
+    exit()"""
     example_colors = [10, 11, 12]  # (purple green gray) -> (wall, goal, floor)
     # example_colors = [COLOR_TO_IDX[i] for i in colors]
     # Example sequence-based adversarial env
@@ -627,3 +628,4 @@ def main():
 
 if __name__ == '__main__':
     main()
+    
