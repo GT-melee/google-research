@@ -305,6 +305,30 @@ class AdvEnv(BaseEnv):
         return self.tf_env.reset_agent()
 
 
+def _process_dataframe(df):
+    # get cum reward
+    cum = df["reward"].sum()
+
+    # get % solved
+    df_solved = df[df["reward"] > 0.0]
+
+    num_ep = len(df)
+    num_solv = len(df_solved)
+    percent_solved = float(num_solv) / float(num_ep)
+
+    agg = {
+        "percent_solved": percent_solved,
+        "cum_reward": cum,
+        "max_possible_reward": len(df),
+        "reward_mean": df['reward'].mean(),
+        "reward_std": df['reward'].std(),
+        "reward_solved_mean": df_solved['reward'].mean(),
+        "reward_solved_std": df_solved['reward'].std()
+    }
+
+    return agg
+
+
 class Metrics:
     def __init__(self, agent_name: str, env_name: str, colors):
         self.agent_name = agent_name
@@ -346,12 +370,8 @@ class Metrics:
         return float(solved) / float(num_ep)
 
     def summarize(self):
-        """Final stats are [% solved, cum_reward]"""
-        output = {
-            'percent_solved': self.get_solve_percentage(),
-            'cum_reward': self.get_cum_reward(),
-        }
-
+        df = self.get_stats()
+        output = _process_dataframe(df)
         return output
 
 
@@ -378,69 +398,6 @@ class EvalAgent:
         self.prepend_name = prepend_video_with_name
 
         self.accumulated_metrics = []
-
-    def summary(self, split_colors: bool = True):
-        def _aggregate_df(frames: list):
-            """frames is a list of dataframes to agg stats on"""
-            if len(frames) == 0:
-                return {"all": None, "indiv": None}
-
-            df = pd.DataFrame()
-            df = pd.concat(frames).reset_index(drop=True)
-
-            if len(df) == 0:
-                return {"all": None, "indiv": None}
-
-            # get cum reward
-            cum = df["reward"].sum()
-
-            # get % solved
-            num_ep = len(df)
-            num_solv = len(df[df["reward"] > 0.0])
-            percent_solved = float(num_solv) / float(num_ep)
-
-            agg = {
-                "percent_solved": percent_solved,
-                "cum_reward": cum,
-                "max_possible_reward": len(df),
-            }
-
-            # get individuals
-            individual = []
-            for metrics in self.accumulated_metrics:
-                df = metrics.get_stats()
-                key = f"{metrics.agent_name}-{metrics.env_name}-{metrics.colors}"
-                tmp = [key, metrics.summarize()]
-                individual.append(tmp)
-
-            return {"all": agg, "indiv": individual}
-
-        if split_colors:
-            static = [
-                metrics.get_stats()
-                for metrics in self.accumulated_metrics
-                if metrics.colors is None
-            ]
-
-            all_colors = [metrics.colors for metrics in self.accumulated_metrics if metrics.colors is not None]
-
-            all_shifts = []
-            for color in all_colors:
-                color_shift = []
-                for metrics in self.accumulated_metrics:
-                    if metrics.colors == color:
-                        color_shift.append(metrics.get_stats())
-                all_shifts.append(color_shift)
-
-            ret_dict = {"static_stats": _aggregate_df(static)}
-            for i, shift in enumerate(all_shifts):
-                ret_dict[str(tuple(all_colors[i]))] = _aggregate_df(shift)
-
-            return ret_dict
-
-        frames = [metrics.get_stats() for metrics in self.accumulated_metrics]
-        output = _aggregate_df(frames)
-        return output
 
     def eval_env(self, env: BaseEnv):
         # ensure no existing env is lingering
@@ -505,9 +462,57 @@ class EvalAgent:
         self.accumulated_metrics.append(metrics)
         return metrics
 
+
+# new summary function (NOT IN THE EVALAGENT CLASS!!!)
+def summary(accumulated_metrics, split_colors: bool = True):
+    def _aggregate_df(frames: list):
+        """frames is a list of dataframes to agg stats on"""
+        if len(frames) == 0:
+            return {"all": None, "indiv": None}
+
+        df = pd.DataFrame()
+        df = pd.concat(frames).reset_index(drop=True)
+
+        if len(df) == 0:
+            return {"all": None, "indiv": None}
+
+        agg = _process_dataframe(df)
+
+        # get individuals
+        individual = []
+        for metrics in accumulated_metrics:
+            df = metrics.get_stats()
+            key = f"{metrics.agent_name}-{metrics.env_name}-{metrics.colors}"
+            tmp = [key, metrics.summarize()]
+            individual.append(tmp)
+
+        return {"all": agg, "indiv": individual}
+
+    if split_colors:
+        static = [metrics.get_stats() for metrics in accumulated_metrics if metrics.colors is None]
+        all_colors = [metrics.colors for metrics in accumulated_metrics if metrics.colors is not None]
+
+        all_shifts = []
+        for color in all_colors:
+            color_shift = []
+            for metrics in accumulated_metrics:
+                if metrics.colors == color:
+                    color_shift.append(metrics.get_stats())
+            all_shifts.append(color_shift)
+
+        ret_dict = {"static_stats": _aggregate_df(static)}
+        for i, shift in enumerate(all_shifts):
+            ret_dict[str(tuple(all_colors[i]))] = _aggregate_df(shift)
+
+        return ret_dict
+
+    frames = [metrics.get_stats() for metrics in accumulated_metrics]
+    output = _aggregate_df(frames)
+    return output
+
 import multiprocessing.pool
 def do_inner_loop(name, weights, env_name, example_colors):
-    agent = EvalAgent(name, weights, num_eval_ep=500, max_steps_per_ep=250)
+    agent = EvalAgent(name, weights, num_eval_ep=1000, max_steps_per_ep=250)
 
     color_env = BaseEnv(env_name, colors=example_colors, video_fp=None)  # f"videos/{name}_COLOR.mp4")
 
@@ -536,15 +541,15 @@ def run_for_one_weight(pool, weight, envs):
     mergy_mc_mergeface = output[0]
     for agent in output[1:]:
         mergy_mc_mergeface.extend(agent)
-    agent = EvalAgent(weight.replace('/', '-'), weight, num_eval_ep=1, max_steps_per_ep=250)
-    agent.accumulated_metrics = mergy_mc_mergeface
+    #agent = EvalAgent(weight.replace('/', '-'), weight, num_eval_ep=1, max_steps_per_ep=250)
+    #agent.accumulated_metrics = mergy_mc_mergeface
 
-    for metrics in agent.accumulated_metrics:
+    for metrics in mergy_mc_mergeface:
         print(metrics)
         print(metrics.get_stats())
         metrics.summarize()
 
-    dico = agent.summary()
+    dico = summary(mergy_mc_mergeface)
     out_str = ""
     for key, item in dico.items():
         out_str += f"{key.upper()}: {item['all']}\n"
@@ -555,7 +560,7 @@ def run_for_one_weight(pool, weight, envs):
 def main():
     pool = multiprocessing.pool.Pool(6)
     for weight in [
-        "./for_janklord_dynamic_shift_2021_04_22/policy_saved_model/agent/0/policy_000573300",
+       "./for_janklord_dynamic_shift_2021_04_22/policy_saved_model/agent/0/policy_000573300",
         "/home/charlie/SDRIVE/datasets/static_apr22/policy_saved_model/agent/0/policy_000499950",
         "/home/charlie/SDRIVE/datasets/randomization_during_training_apr22/policy_saved_model/agent/0/policy_000396600",
         "./baseline/agents/policy_000438000"

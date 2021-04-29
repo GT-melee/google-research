@@ -22,7 +22,10 @@ COLORS = {
     "black" : np.array([0,0,0]),
     "teal" : np.array([100, 200, 255]),
     "chartreuse": np.array([111, 222, 123]),
-    "lamourestbrun": np.array([222,222,0])
+    "lamourestbrun": np.array([222,222,0]),
+    "znew_unseen_1": np.array([4,2,0]),
+    "zznew_unseen_2": np.array([1,33,7]),
+    "zzznew_unseen_3": np.array([0,6,9]),
 }
 
 COLOR_NAMES = sorted(list(COLORS.keys()))
