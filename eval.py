@@ -30,7 +30,7 @@ import os
 os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
 
 try:
-    from social_rl.gym_multigrid.gym_minigrid.minigrid import COLORS, IDX_TO_COLOR, COLOR_TO_IDX
+    from social_rl.gym_multigrid.gym_minigrid.minigrid import COLORS, IDX_TO_COLOR, COLOR_TO_IDX, COLOR_NAMES
 except ImportError as e:
     logging.warning(
         """Not able to import any color info - you are likely running in the original rep.
@@ -119,14 +119,19 @@ class BaseEnv:
 
         kwargs = self.gym_kwargs.copy()
         if self.colors is not None:
-            _get_color = lambda x: list(COLORS.keys())[x % len(COLORS)]
             kwargs.update(
                 {
-                    "wall_color": _get_color(self.colors[0]),
-                    "goal_color": _get_color(self.colors[1]),
-                    "floor_color": _get_color(self.colors[2]),
+                    "wall_color":COLOR_NAMES[self.colors[0]],
+                    "goal_color": COLOR_NAMES[self.colors[1]],
+                    "floor_color": COLOR_NAMES[self.colors[2]],
                 }
             )
+
+            """
+          "wall_color":COLOR_NAMES[self.colors[0]],
+                    "goal_color": COLOR_NAMES[self.colors[1]],
+                    "floor_color": COLOR_NAMES[self.colors[2]],
+            """
 
         py_env = multiagent_gym_suite.load(self.name, gym_kwargs=kwargs)
         tf_env = tf_py_environment.TFPyEnvironment(py_env)
@@ -423,15 +428,17 @@ class EvalAgent:
             actions = []
 
             for i in range(self.max_steps_per_ep):
-                """
+
                 obs = timestep.observation
                 img = np.zeros(obs["image"].shape, dtype=np.uint8)
                 x = np.array(obs["image"])
-                img[np.all(x == [0,0,0], axis=-1)] = [1,0,0]
-                img[np.all(x == [4, 4, 0], axis=-1)] = [2, 5, 0]
-                img[np.all(x == [3, 3, 0], axis=-1)] = [8, 1, 0]
+                all_vals = np.unique(x)
+                print(all_vals)
+                img[np.all(x == [0,0,0], axis=-1)] = [1,1,0]    # empty (floor)
+                img[np.all(x == [4, 4, 0], axis=-1)] = [2, 2, 0]       # wall
+                img[np.all(x == [3, 3, 0], axis=-1)] = [8, 8, 0]    # goal
                 #img = img[None, :, :, :]
-                timestep.observation["image"] = tf.convert_to_tensor(img)"""
+                timestep.observation["image"] = tf.convert_to_tensor(img)
 
                 # main loop
                 policy_step = self.agent.action(timestep, policy_state=policy_state)
@@ -525,11 +532,14 @@ def run_for_one_weight(pool, weight, envs):
 
     inputs = []
     for example_colors in [
-        None,       # static
+        #None,       # static
         (4, 3, 0),  # static
-        (2,3,4),    # collapse
-        (1,6,7),    # new seen colors
-        (10,11,12)  # new unseen colors
+        #(2,3,4),    # collapse
+        #(1,6,7),    # new seen colors
+        #(10,11,12),
+       # (7, 4, 8),  # what I think teal, yellow, chartreuse is
+       # (8, 9, 2)
+        # new unseen colors
     ]:
         run_names = [RUN_NAME] * len(envs)
         weights = [weight] * len(envs)
@@ -558,16 +568,12 @@ def run_for_one_weight(pool, weight, envs):
         f.write(out_str)
 
 def main():
-    """
     pool = multiprocessing.pool.Pool(6)
     for weight in [
-       "./for_janklord_dynamic_shift_2021_04_22/policy_saved_model/agent/0/policy_000573300",
-        "/home/charlie/SDRIVE/datasets/static_apr22/policy_saved_model/agent/0/policy_000499950",
-        "/home/charlie/SDRIVE/datasets/randomization_during_training_apr22/policy_saved_model/agent/0/policy_000396600",
-        "./baseline/agents/policy_000438000"
+        "/home/charlie/SDRIVE/datasets/debug_may14/policy_saved_model/agent/0/policy_000499950"
     ]:
-        run_for_one_weight(pool, weight, VAL_ENVS+TEST_ENVS)#MINI_TEST_ENVS+MINI_VAL_ENVS)
-    exit()"""
+        run_for_one_weight(pool, weight, MINI_TEST_ENVS+MINI_VAL_ENVS)
+    exit()
     example_colors = [10, 11, 12]  # (purple green gray) -> (wall, goal, floor)
     # example_colors = [COLOR_TO_IDX[i] for i in colors]
     # Example sequence-based adversarial env
